@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Payment - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h3 class="mb-1">
+                Payment -
+                {% if method == "cashless" %}
+                    Cashless
+                {% else %}
+                    Cash
+                {% endif %}
+            </h3>
+            <p class="text-muted small mb-0">
+                Please review your order and complete the payment.
+            </p>
+        </div>
+    </div>
+
+    <!-- Order summary -->
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <h5 class="mb-3">Order Summary</h5>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Snack</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Price (₹)</th>
+                            <th class="text-end">Subtotal (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.snack_name }}</td>
+                            <td class="text-center">{{ item.qty }}</td>
+                            <td class="text-end">{{ item.price }}</td>
+                            <td class="text-end">{{ item.subtotal }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="table-light">
+                            <th colspan="3" class="text-end">Total</th>
+                            <th class="text-end">₹{{ total }}</th>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment instructions / QR -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    {% if method == "cashless" %}
+                        <div>
+                            <h5 class="mb-2">Cashless Payment</h5>
+                            <p class="text-muted small">
+                                1. Scan the QR code using any UPI app (PhonePe, GPay, Paytm, etc.).<br>
+                                2. Complete the payment of <strong>₹{{ total }}</strong>.<br>
+                                3. After successful payment, tap <strong>“Payment Done”</strong> below.
+                            </p>
+                        </div>
+                    {% else %}
+                        <div>
+                            <h5 class="mb-2">Cash Payment</h5>
+                            <p class="text-muted small">
+                                Please pay <strong>₹{{ total }}</strong> in cash at the counter.
+                                After handing over the cash, tap <strong>“Payment Done”</strong> below.
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="method" value="{{ method }}">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" name="action" value="done" class="btn btn-brand">
+                                Payment Done
+                            </button>
+                            <button type="submit" name="action" value="cancel" class="btn btn-outline-secondary">
+                                Cancel &amp; Go Back
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% if method == "cashless" %}
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h6 class="mb-3">Scan to Pay (Cashless)</h6>
+                    <div style="max-width: 260px; width: 100%; border: 1px solid #eee; padding: 8px; border-radius: 12px;">
+                        <img src="{% static 'images/payment-qr-code.jpg' %}"
+                             alt="Payment QR Code"
+                             class="img-fluid d-block mx-auto"
+                             style="border-radius: 8px;">
+                    </div>
+                    <p class="text-muted small mt-2 mb-0 text-center">
+                        Use any UPI app to scan this QR code and complete the payment.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

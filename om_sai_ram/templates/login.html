@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root{
+        --brand: #eb8c34;
+        --brand-dark: #e46a00;
+    }
+    .auth-page-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+    .bg-overlay-auth {
+        background: rgba(255,255,255,0.85);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    .container { max-width: 1100px; }
+
+    h1 {
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 2.1rem;
+        margin-bottom: 0;
+    }
+    h6 {
+        color: var(--brand-dark);
+        margin-bottom: 18px;
+    }
+
+    .left-panel {
+        padding: 28px;
+        border-radius: 12px;
+    }
+
+    label { font-weight: 600; color: #333; }
+
+    .btn-primary {
+        background-color: var(--brand);
+        border-color: var(--brand);
+        font-weight: 600;
+    }
+    .btn-primary:hover {
+        background-color: var(--brand-dark);
+        border-color: var(--brand-dark);
+    }
+
+    .carousel-item img {
+        border-radius: 12px;
+        height: 420px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .carousel-caption {
+        position: absolute;
+        left: 12px;
+        bottom: 16px;
+        right: 12px;
+        text-align: left;
+        padding: 8px 12px;
+        background: linear-gradient(90deg, rgba(235,140,52,0.95), rgba(229,106,0,0.95));
+        border-radius: 10px;
+        color: #fff;
+    }
+    .carousel-caption .product-name {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+    .carousel-caption .product-price {
+        font-weight: 600;
+        font-size: 0.95rem;
+        opacity: 0.95;
+    }
+
+    .carousel-indicators { z-index: 5; }
+    @media (max-width: 767px) {
+        .carousel-item img { height: 220px; }
+        .left-panel { padding: 18px; }
+        .carousel-caption { left: 8px; right: 8px; bottom: 10px; font-size: 13px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+    <div class="row align-items-center">
+        <!-- LEFT: login form -->
+        <div class="col-lg-6 col-md-7">
+            <div class="bg-overlay-auth left-panel">
+                <h1>ॐ साई राम</h1>
+                <h6>Online Snacks Centre</h6>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Email or Mobile Number</label>
+                        <input type="text" name="identifier" class="form-control"
+                               placeholder="Enter Email or Mobile" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control"
+                               placeholder="Enter Password" required>
+                    </div>
+                    <button type="submit" class="btn btn-brand w-100">Login</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>Don't have an account?
+                        <a href="{% url 'register' %}"
+                           style="color:var(--brand); font-weight:600;">Register here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: snack carousel -->
+        <div class="col-lg-6 col-md-5 mt-4 mt-md-0">
+            <div id="snackCarousel" class="carousel slide"
+                 data-bs-ride="carousel" data-bs-interval="2500" data-bs-pause="hover">
+                <div class="carousel-inner">
+                    <!-- same 24 slides as Flask -->
+                    <div class="carousel-item active">
+                        <img src="{% static 'images/vada-pav.jpg' %}" alt="Vada Pav">
+                        <div class="carousel-caption">
+                            <div class="product-name">Vada Pav</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/medu-vada.jpg' %}" alt="Medu Vada">
+                        <div class="carousel-caption">
+                            <div class="product-name">Medu Vada</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sabudana-vada.jpg' %}" alt="Sabudana Vada">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sabudana Vada</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sabudana-khichadi.jpg' %}" alt="Sabudana Khichadi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sabudana Khichadi</div>
+                            <div class="product-price">₹40</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/samosa.jpg' %}" alt="Samosa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Samosa</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/pohe.jpg' %}" alt="Pohe">
+                        <div class="carousel-caption">
+                            <div class="product-name">Pohe</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sheera.jpg' %}" alt="Sheera">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sheera</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/misal-pav.jpg' %}" alt="Misal Pav">
+                        <div class="carousel-caption">
+                            <div class="product-name">Misal Pav</div>
+                            <div class="product-price">₹70</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/bhel.jpg' %}" alt="Bhel">
+                        <div class="carousel-caption">
+                            <div class="product-name">Bhel</div>
+                            <div class="product-price">₹50</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/pav-bhaji.jpg' %}" alt="Pav Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Pav Bhaji</div>
+                            <div class="product-price">₹60</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/kanda-bhaji.jpg' %}" alt="Kanda Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Kanda Bhaji</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/alu-vadi.jpg' %}" alt="Alu Vadi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Alu Vadi</div>
+                            <div class="product-price">₹40</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/batata-bhaji.jpg' %}" alt="Batata Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Batata Bhaji</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/panipuri.jpg' %}" alt="Panipuri">
+                        <div class="carousel-caption">
+                            <div class="product-name">Panipuri</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/bharli-vangi.jpg' %}" alt="Bharli Vangi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Bharli Vangi</div>
+                            <div class="product-price">₹70</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/puran-poli.jpg' %}" alt="Puran Poli">
+                        <div class="carousel-caption">
+                            <div class="product-name">Puran Poli</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/shrikhand-puri.jpg' %}" alt="Shrikhand Puri">
+                        <div class="carousel-caption">
+                            <div class="product-name">Shrikhand Puri</div>
+                            <div class="product-price">₹80</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/thalipeeth.jpg' %}" alt="Thalipeeth">
+                        <div class="carousel-caption">
+                            <div class="product-name">Thalipeeth</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/upma.jpg' %}" alt="Upma">
+                        <div class="carousel-caption">
+                            <div class="product-name">Upma</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/dosa.jpg' %}" alt="Dosa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Dosa</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/idli.jpg' %}" alt="Idli">
+                        <div class="carousel-caption">
+                            <div class="product-name">Idli</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/uttapa.jpg' %}" alt="Uttapa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Uttapa</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/chaha.jpg' %}" alt="Chaha">
+                        <div class="carousel-caption">
+                            <div class="product-name">Chaha</div>
+                            <div class="product-price">₹10</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/coffee.jpg' %}" alt="Coffee">
+                        <div class="carousel-caption">
+                            <div class="product-name">Coffee</div>
+                            <div class="product-price">₹10</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="carousel-control-prev" type="button"
+                        data-bs-target="#snackCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button"
+                        data-bs-target="#snackCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+        let valid = true;
+        const idf = this.identifier;
+        const pwd = this.password;
+
+        if (!idf.value.trim()) { idf.classList.add('is-invalid'); valid = false; }
+        else idf.classList.remove('is-invalid');
+
+        if (!pwd.value.trim()) { pwd.classList.add('is-invalid'); valid = false; }
+        else pwd.classList.remove('is-invalid');
+
+        if (!valid) e.preventDefault();
+    });
+</script>
+{% endblock %}

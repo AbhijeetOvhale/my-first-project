@@ -1,0 +1,78 @@
+{% extends "owner/base.html" %}
+
+{% block title %}Customers - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Customers</h3>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Name</label>
+                <input type="text" name="q_name" value="{{ q_name }}"
+                       class="form-control form-control-sm"
+                       placeholder="Search by name">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Email</label>
+                <input type="text" name="q_email" value="{{ q_email }}"
+                       class="form-control form-control-sm"
+                       placeholder="Search by email">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Mobile</label>
+                <input type="text" name="q_mobile" value="{{ q_mobile }}"
+                       class="form-control form-control-sm"
+                       placeholder="Search by mobile">
+            </div>
+            <div class="col-12 text-end mt-2">
+                <button type="submit" class="btn btn-sm btn-orange">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Read-only table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ u.user_id }}</td>
+                            <td>{{ u.user_name }}</td>
+                            <td>{{ u.email }}</td>
+                            <td>{{ u.mobile }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No customers found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

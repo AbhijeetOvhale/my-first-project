@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - Om Sai Ram Snacks Center{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="mb-0">Checkout</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="mb-3">Order Summary</h5>
+                <ul class="list-group list-group-flush">
+                    {% for item in items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ item.snack_name }}</strong>
+                                <span class="text-muted small"> × {{ item.qty }}</span>
+                            </div>
+                            <div>
+                                <span class="text-muted small me-2">₹ {{ item.price }} each</span>
+                                <strong>₹ {{ item.subtotal }}</strong>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Total</h5>
+                <p class="fs-4 mb-4">₹ {{ total }}</p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'payment' 'cash' %}" class="btn btn-brand">Pay in Cash</a>
+                    <a href="{% url 'payment' 'cashless' %}" class="btn btn-brand">Pay Cashless</a>
+                    <a href="{% url 'cart' %}" class="btn btn-link text-decoration-none">Back to Cart</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

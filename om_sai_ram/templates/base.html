@@ -1,0 +1,338 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Om Sai Ram Snacks Center{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand: #eb8c34;
+            --brand-dark: #e46a00;
+            --brand-light: #ffe2c4;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            background-image: url("{% static 'images/bg-image.png' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        .outer-container {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+
+        .bg-overlay {
+            background: rgba(255,255,255,0.92);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+            border-radius: 10px;
+        }
+
+        .navbar-brand,
+        .navbar .nav-link,
+        .navbar-text {
+            color: #fff !important;
+        }
+
+        .navbar-brand span.marathi {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .nav-link.active {
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .cart-badge {
+            background: #fff;
+            color: var(--brand-dark);
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: .78rem;
+            margin-left: 6px;
+        }
+
+        /* cart count badge in navbar */
+        .cart-count-badge {
+            background-color: #fff;
+            color: #eb8c34;
+            font-size: 0.9rem;
+            padding: 0.15rem 0.45rem;
+            vertical-align: baseline;
+        }
+
+        .btn-brand {
+            background-color: var(--brand);
+            border-color: var(--brand);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .btn-brand:hover {
+            background-color: var(--brand-dark);
+            border-color: var(--brand-dark);
+            color: #fff;
+        }
+
+        .content-wrapper {
+            margin-top: 1rem;
+        }
+
+        footer {
+            background: linear-gradient(90deg, var(--brand-dark), var(--brand));
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="outer-container">
+    <div class="container">
+        <div class="bg-overlay">
+
+            <!-- NAVBAR -->
+            <nav class="navbar navbar-expand-lg mb-3 px-3" aria-label="Main navigation">
+                <div class="container-fluid p-0">
+                    <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                        <span class="marathi me-2">ॐ साई राम</span>
+                        <span>Snacks Centre</span>
+                    </a>
+
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#mainNavbar" aria-controls="mainNavbar"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="mainNavbar">
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                            <!-- Home -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                                   href="{% url 'home' %}">Home</a>
+                            </li>
+
+                            {% if request.session.user and request.session.user != 'owner' %}
+                                <!-- Normal user links -->
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+                                       href="{% url 'profile' %}">Profile</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'orders' %}active{% endif %}"
+                                       href="{% url 'orders' %}">My Orders</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'live_orders' %}active{% endif %}"
+                                       href="{% url 'live_orders' %}">Live Status</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+
+                        <!-- Right side -->
+                        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+
+                            {% if request.session.user and request.session.user != 'owner' %}
+                                <!-- Cart -->
+                                <li class="nav-item">
+                                    <a class="nav-link d-flex align-items-center" href="{% url 'cart' %}">
+                                        <i class="bi bi-cart3 me-1"></i>
+                                        <span>Cart</span>
+                                        <span id="cart-count-badge"
+                                              class="badge rounded-pill ms-1 cart-count-badge {% if not cart_count %}d-none{% endif %}">
+                                            {{ cart_count|default:0 }}
+                                        </span>
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a class="btn btn-sm btn-light" href="{% url 'logout' %}">Logout</a>
+                                </li>
+
+                            {% elif request.session.user == 'owner' %}
+                                <!-- Owner logged in (user base rarely used for owner, but safe) -->
+                                <li class="nav-item me-2">
+                                    <span class="navbar-text">Owner</span>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="btn btn-sm btn-light" href="{% url 'logout' %}">Logout</a>
+                                </li>
+
+                            {% else %}
+                                <!-- Guest -->
+                                <li class="nav-item me-2">
+                                    <a class="btn btn-sm btn-light" href="{% url 'login' %}">Login</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="btn btn-sm btn-brand" href="{% url 'register' %}">Register</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- MESSAGES -->
+            {% if messages %}
+                <div class="mb-3">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- PAGE CONTENT -->
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- FOOTER -->
+            <footer>
+                © {% now "Y" %} Om Sai Ram Snacks Centre. All rights reserved.
+            </footer>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for JS notifications (global generic toast) -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="globalToast" class="toast text-bg-success border-0">
+        <div class="d-flex">
+            <div class="toast-body" id="globalToastBody">Done</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// --- CSRF helper (standard Django pattern) ---
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// --- update badge in navbar ---
+function updateCartCountDisplay(count) {
+    const badge = document.getElementById('cart-count-badge');
+    if (!badge) return;
+
+    const c = parseInt(count || 0, 10);
+    badge.textContent = c;
+
+    if (c > 0) {
+        badge.classList.remove('d-none');
+    } else {
+        badge.classList.add('d-none');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // avoid double-bind if script somehow included twice
+    if (window.__OSC_ADD_TO_CART_INIT__) return;
+    window.__OSC_ADD_TO_CART_INIT__ = true;
+
+    // Setup optional "Added to cart" toast if present (home page)
+    let addToCartToastInstance = null;
+    let addToCartToastBody = null;
+    const addToCartToastEl = document.getElementById('addToCartToast');
+    if (addToCartToastEl && window.bootstrap && bootstrap.Toast) {
+        addToCartToastInstance = new bootstrap.Toast(addToCartToastEl);
+        addToCartToastBody = document.getElementById('addToCartToastBody');
+    }
+
+    // Delegate clicks on any ".btn-add-to-cart" button
+    document.body.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-add-to-cart');
+        if (!btn) return;
+
+        e.preventDefault();
+
+        const snackId = btn.getAttribute('data-snack-id');
+        if (!snackId) return;
+
+        fetch("{% url 'add_to_cart' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({
+                snack_id: snackId,
+                quantity: 1
+            })
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.success) {
+                // ✅ update navbar badge
+                updateCartCountDisplay(data.cart_count);
+
+                // ✅ show toast on pages that have home toast markup
+                if (addToCartToastInstance) {
+                    if (addToCartToastBody) {
+                        addToCartToastBody.textContent = "Added to cart.";
+                    }
+                    addToCartToastInstance.show();
+                }
+            } else if (data.error === "login required") {
+                window.location.href = "{% url 'login' %}";
+            } else {
+                console.error("Add to cart error:", data);
+            }
+        })
+        .catch(err => {
+            console.error("Network error while adding to cart:", err);
+        });
+    });
+});
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

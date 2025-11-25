@@ -1,0 +1,54 @@
+{% extends "owner/base.html" %}
+
+{% block title %}Feedback - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Customer Feedback</h4>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Rating</th>
+                        <th>Feedback</th>
+                        <th>Time</th>
+                        <th style="width:110px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fb in feedbacks %}
+                    <tr>
+                        <td>{{ fb.feedback_id }}</td>
+                        <td>{{ fb.user.user_name }}</td>
+                        <td>
+                            {% if fb.rating %}{{ fb.rating }}/5{% else %}-{% endif %}
+                        </td>
+                        <td style="max-width:320px;">{{ fb.feedback_content }}</td>
+                        <td>{{ fb.feedback_time }}</td>
+                        <td>
+                            <form method="post"
+                                  action="{% url 'owner_delete_feedback' fb.feedback_id %}"
+                                  onsubmit="return confirm('Delete this feedback?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No feedback yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

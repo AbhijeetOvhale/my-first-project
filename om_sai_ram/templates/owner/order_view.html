@@ -1,0 +1,46 @@
+{% extends "owner/base.html" %}
+
+{% block title %}Order Details - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Order #{{ order.order_id }}</h4>
+
+        <p>
+            <strong>User:</strong> {{ order.user.user_name }} (ID: {{ order.user.user_id }})<br>
+            <strong>Status:</strong> {{ order.status }}<br>
+            <strong>Total Price:</strong> ₹{{ order.price }}<br>
+            <strong>Order Time:</strong> {{ order.order_time }}
+        </p>
+
+        <h5 class="mt-4">Items</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Snack</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.snack.snack_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center text-muted">No items (data missing).</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <a href="{% url 'owner_orders_list' %}" class="btn btn-secondary mt-2">
+            Back to orders
+        </a>
+    </div>
+</div>
+{% endblock %}

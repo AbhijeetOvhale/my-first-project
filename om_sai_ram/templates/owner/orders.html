@@ -1,0 +1,114 @@
+{% extends "owner/base.html" %}
+{% load static %}
+
+{% block title %}Orders - Owner{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-0">Orders (Today)</h3>
+            <p class="text-muted mb-0 small">
+                Showing orders for: {{ today|date:"Y-m-d" }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Search by user / email</label>
+                <input type="text" name="q_user" value="{{ q_user }}"
+                       class="form-control form-control-sm"
+                       placeholder="User name or email">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Status</label>
+                <select name="q_status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Pending"   {% if q_status == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Paid"      {% if q_status == "Paid" %}selected{% endif %}>Paid</option>
+                    <option value="Preparing" {% if q_status == "Preparing" %}selected{% endif %}>Preparing</option>
+                    <option value="Ready"     {% if q_status == "Ready" %}selected{% endif %}>Ready</option>
+                    <option value="Completed" {% if q_status == "Completed" %}selected{% endif %}>Completed</option>
+                    <option value="Cancelled" {% if q_status == "Cancelled" %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button type="submit" class="btn btn-sm btn-orange mt-3 mt-md-0">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Order ID</th>
+                            <th>User</th>
+                            <th>Price (₹)</th> 
+                            <th>Status</th>
+                            <th>Order Time</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ order.order_id }}</td>
+                            <td>
+                                {{ order.user.user_name }}<br>
+                                <small class="text-muted">{{ order.user.email }}</small>
+                            </td>
+                            <td>{{ order.price|default:"0" }}</td>
+                            <td>
+                                <!-- per-row status update -->
+                                <form method="post"
+                                      action="{% url 'owner_change_order_status' order.order_id %}"
+                                      class="d-flex gap-1 align-items-center">
+                                    {% csrf_token %}
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="Pending"   {% if order.status == "Pending" %}selected{% endif %}>Pending</option>
+                                        <option value="Paid"      {% if order.status == "Paid" %}selected{% endif %}>Paid</option>
+                                        <option value="Preparing" {% if order.status == "Preparing" %}selected{% endif %}>Preparing</option>
+                                        <option value="Ready"     {% if order.status == "Ready" %}selected{% endif %}>Ready</option>
+                                        <option value="Completed" {% if order.status == "Completed" %}selected{% endif %}>Completed</option>
+                                        <option value="Cancelled" {% if order.status == "Cancelled" %}selected{% endif %}>Cancelled</option>
+                                    </select>
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-success">
+                                        Save
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                {{ order.order_time|date:"Y-m-d H:i" }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'owner_view_order' order.order_id %}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No orders for today.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

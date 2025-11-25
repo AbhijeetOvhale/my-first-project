@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Live Order Status - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+
+<style>
+    .live-orders-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .status-chip {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: 1px solid rgba(0,0,0,0.15);
+        background-color: #f8f9fa; 
+        color: #212529;             
+        white-space: nowrap;
+    }
+    .status-chip-success {
+        border-color: #198754;
+    }
+    .status-chip-warn {
+        border-color: #fd7e14;
+    }
+    .status-chip-info {
+        border-color: #0d6efd;
+    }
+    .status-chip-muted {
+        border-style: dashed;
+    }
+</style>
+
+<div class="live-orders-container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-1">Live Order Status</h3>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Order ID</th>
+                            <th>Status</th>
+                            <th>Amount (₹)</th>
+                            <th>Order Time</th>
+                            <th>Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="live-orders-body">
+                        {# Initial server-side render as fallback (will be overwritten by JS) #}
+                        {% for order in orders %}
+                            {% with payment=order.payments.last %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ order.order_id }}</td>
+                                <td>
+                                    <span class="status-chip">
+                                        {{ order.status }}
+                                    </span>
+                                </td>
+                                <td>{{ order.price|default:"0" }}</td>
+                                <td>{{ order.order_time|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    {% if payment %}
+                                        <span class="status-chip">
+                                            {{ payment.status }}
+                                        </span>
+                                    {% else %}
+                                        <span class="status-chip status-chip-muted">
+                                            No payment
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                You have no recent orders.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tbody = document.getElementById('live-orders-body');
+    if (!tbody) return;
+
+    function formatDateTime(isoString) {
+        try {
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return isoString;
+            // Simple readable format
+            return d.toLocaleString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+        } catch (e) {
+            return isoString;
+        }
+    }
+
+    function buildStatusChip(status) {
+        // Always dark text; just vary border slightly
+        let extraClass = '';
+        const s = (status || '').toString();
+
+        if (s === 'Completed' || s === 'Ready') {
+            extraClass = ' status-chip-success';
+        } else if (s === 'Preparing' || s === 'Paid') {
+            extraClass = ' status-chip-info';
+        } else if (s === 'Pending') {
+            extraClass = ' status-chip-warn';
+        } else if (!s) {
+            extraClass = ' status-chip-muted';
+        }
+
+        const label = s || '—';
+        return `<span class="status-chip${extraClass}">${label}</span>`;
+    }
+
+    async function fetchLatestOrders() {
+        try {
+            const resp = await fetch("{% url 'api_user_latest_orders' %}");
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.orders) return;
+
+            tbody.innerHTML = '';  // clear body
+
+            if (data.orders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            You have no recent orders.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            data.orders.forEach((o, idx) => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td>${o.order_id}</td>
+                    <td>${buildStatusChip(o.status)}</td>
+                    <td>${o.price ?? 0}</td>
+                    <td>${formatDateTime(o.order_time)}</td>
+                    <td>${buildStatusChip(o.payment_status)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (err) {
+            console.error('Error loading live orders:', err);
+        }
+    }
+
+    // Initial load
+    fetchLatestOrders();
+
+    // Auto refresh every 3 seconds
+    setInterval(fetchLatestOrders, 3000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback - Om Sai Ram Snacks Center{% endblock %}
+
+{% block extra_head %}
+<style>
+    .star-rating {
+        display: flex;
+        flex-direction: row; /* left to right */
+        gap: 0.25rem;
+        font-size: 1.8rem;
+        cursor: pointer;
+    }
+    .star-rating .star {
+        color: #ddd;
+        transition: color 0.15s ease;
+    }
+    .star-rating .star.filled {
+        color: #ffc107;
+    }
+    .char-counter {
+        font-size: 0.85rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-3">Share Your Feedback</h1>
+                <p class="text-muted small mb-4">
+                    Your feedback helps us improve snacks and service.
+                </p>
+
+                <form id="feedbackForm" method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="method" value="{{ method }}">
+                    <input type="hidden" id="ratingInput" name="rating" value="0">
+
+                    <div class="mb-3">
+                        <label class="form-label d-block">Rating</label>
+                        <div class="star-rating" id="starRating">
+                            <span class="star" data-value="1">&#9733;</span>
+                            <span class="star" data-value="2">&#9733;</span>
+                            <span class="star" data-value="3">&#9733;</span>
+                            <span class="star" data-value="4">&#9733;</span>
+                            <span class="star" data-value="5">&#9733;</span>
+                        </div>
+                        <div class="invalid-feedback d-block" id="ratingError" style="display:none;">
+                            Please select a rating.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feedback_content" class="form-label">Comments (optional)</label>
+                        <textarea class="form-control" id="feedback_content" name="feedback_content"
+                                  rows="4" maxlength="350"></textarea>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Max 350 characters.</small>
+                            <small class="char-counter" id="charCounter">0 / 350</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" name="action" value="skip"
+                                class="btn btn-outline-secondary">Skip</button>
+                        <button type="submit" name="action" value="submit"
+                                class="btn btn-brand">Submit Feedback</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Star rating left to right
+    (function () {
+        const stars = document.querySelectorAll('#starRating .star');
+        const ratingInput = document.getElementById('ratingInput');
+        const ratingError = document.getElementById('ratingError');
+
+        function setRating(val) {
+            ratingInput.value = val;
+            stars.forEach(star => {
+                const value = parseInt(star.getAttribute('data-value'));
+                if (value <= val) {
+                    star.classList.add('filled');
+                } else {
+                    star.classList.remove('filled');
+                }
+            });
+            ratingError.style.display = 'none';
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('click', function () {
+                const val = parseInt(this.getAttribute('data-value'));
+                setRating(val);
+            });
+        });
+
+        document.getElementById('feedbackForm').addEventListener('submit', function (e) {
+            const action = document.activeElement ? document.activeElement.value : null;
+            if (action === 'skip') return; // allow skip
+            if (parseInt(ratingInput.value) < 1) {
+                e.preventDefault();
+                ratingError.style.display = 'block';
+            }
+        });
+    })();
+
+    // Character counter for feedback textarea
+    (function () {
+        const textarea = document.getElementById('feedback_content');
+        const counter = document.getElementById('charCounter');
+        if (!textarea || !counter) return;
+
+        function updateCount() {
+            const len = textarea.value.length;
+            counter.textContent = `${len} / 350`;
+        }
+
+        textarea.addEventListener('input', updateCount);
+        updateCount();
+    })();
+</script>
+{% endblock %}

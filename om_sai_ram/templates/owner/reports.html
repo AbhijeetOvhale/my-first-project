@@ -1,0 +1,171 @@
+{% extends "owner/base.html" %}
+
+{% block title %}Reports - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+
+<style>
+    .chart-wrapper {
+        width: 100%;
+        max-width: 650px;
+        height: 260px;
+        margin: auto;
+        padding: 8px;
+    }
+</style>
+
+<div class="container py-4">
+
+    <!-- SUMMARY CARDS -->
+    <div class="row g-3 mb-4">
+
+        <!-- TODAY REVENUE (COMPLETED PAYMENTS) -->
+        <div class="col-md-6">
+            <a href="{% url 'owner_reports_payments' %}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Total Revenue (Today) :</h6>
+                        <div class="h4 fw-bold">₹{{ today_revenue|default:"0" }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- TODAY ORDERS (COMPLETED) -->
+        <div class="col-md-6">
+            <a href="{% url 'owner_reports_orders' %}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-1">Total Orders (Today) :</h6>
+                        <div class="h4 fw-bold">{{ today_orders|default:"0" }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- GRAPH WITH DATE RANGE (DEFAULT LAST 7 DAYS) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="mb-1">Revenue Graph</h5>
+                    <p class="text-muted small mb-0">
+                        Completed payments between selected dates.
+                    </p>
+                </div>
+
+                <form method="get" class="row g-2 align-items-end mt-2 mt-md-0">
+                    <div class="col-auto">
+                        <label class="form-label small mb-1">From</label>
+                        <input type="date" name="from" value="{{ date_from }}"
+                               class="form-control form-control-sm">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small mb-1">To</label>
+                        <input type="date" name="to" value="{{ date_to }}"
+                               class="form-control form-control-sm">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-sm btn-orange mt-3 mt-md-0">
+                            Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPULAR SNACKS -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <h5 class="mb-3">Top 10 Popular Snacks</h5>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Snack</th>
+                            <th>Total Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for snack in popular %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ snack.snack_name }}</td>
+                            <td>{{ snack.total_sold|default:"0" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3">
+                                No sales records yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                Based on total quantity sold from all orders.
+            </p>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const canvas = document.getElementById('revenueChart');
+    if (!canvas) return;
+
+    // Fixed size graph
+    canvas.width = 650;
+    canvas.height = 260;
+
+    const labels = [
+        {% for d in chart_labels %}
+            '{{ d }}'{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const values = [
+        {% for v in chart_values %}
+            {{ v }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: values,
+                borderWidth: 2,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: false,           // fixed size
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

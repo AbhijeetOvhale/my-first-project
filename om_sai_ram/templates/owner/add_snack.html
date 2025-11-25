@@ -1,0 +1,53 @@
+{% extends "owner/base.html" %}
+
+{% block title %}Add Snack - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Add New Snack</h4>
+
+        <form method="post" enctype="multipart/form-data" id="addSnackForm">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Snack Name</label>
+                    <input type="text" name="snack_name" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Price (₹)</label>
+                    <input type="number" name="price" class="form-control"
+                           min="0" step="1" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Available Quantity</label>
+                    <input type="number" name="available_quantity" class="form-control"
+                           min="0" step="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Image</label>
+                    <input type="file" name="image" class="form-control"
+                           accept=".jpg,.jpeg,.png">
+                </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-between">
+                <a href="{% url 'owner_inventory' %}" class="btn btn-secondary">Back to inventory</a>
+                <button type="submit" class="btn btn-orange">Save Snack</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('addSnackForm')?.addEventListener('submit', function (e) {
+    const price = Number(this.price.value || 0);
+    const qty = Number(this.available_quantity.value || 0);
+    if (price < 0 || qty < 0) {
+        alert("Price and quantity must be non-negative.");
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

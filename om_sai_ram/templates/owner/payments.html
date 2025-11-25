@@ -1,0 +1,104 @@
+{% extends "owner/base.html" %}
+{% load static %}
+
+{% block title %}Payments - Owner{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-0">Payments (Today)</h3>
+            <p class="text-muted mb-0 small">
+                Showing payments for: {{ today|date:"Y-m-d" }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Order ID</label>
+                <input type="text" name="q_order" value="{{ q_order }}"
+                       class="form-control form-control-sm"
+                       placeholder="Order ID">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Mode</label>
+                <input type="text" name="q_mode" value="{{ q_mode }}"
+                       class="form-control form-control-sm"
+                       placeholder="Cash / Cashless">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select name="q_status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Pending"   {% if q_status == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Completed" {% if q_status == "Completed" %}selected{% endif %}>Completed</option>
+                    <option value="Failed"    {% if q_status == "Failed" %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-md-end">
+                <button type="submit" class="btn btn-sm btn-orange mt-3 mt-md-0">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Payment ID</th>
+                            <th>Order ID</th>
+                            <th>Mode</th>
+                            <th>Price (₹)</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payments %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ p.payment_id }}</td>
+                            <td>{{ p.order.order_id }}</td>
+                            <td>{{ p.mode|default:"-" }}</td>
+                            <td>{{ p.order.price|default:"0" }}</td>
+                            <td>
+                                <!-- per-row status update -->
+                                <form method="post"
+                                      action="{% url 'owner_change_payment_status' p.payment_id %}"
+                                      class="d-flex gap-1 align-items-center">
+                                    {% csrf_token %}
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="Pending"   {% if p.status == "Pending" %}selected{% endif %}>Pending</option>
+                                        <option value="Completed" {% if p.status == "Completed" %}selected{% endif %}>Completed</option>
+                                        <option value="Failed"    {% if p.status == "Failed" %}selected{% endif %}>Failed</option>
+                                    </select>
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-success">
+                                        Save
+                                    </button>
+                                </form>
+                            </td>
+                            <td>{{ p.payment_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No payments for today.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

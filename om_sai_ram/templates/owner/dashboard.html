@@ -1,0 +1,91 @@
+{% extends "owner/base.html" %}
+
+{% block title %}Owner Dashboard - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <a href="{% url 'owner_customers' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Users :</h6>
+                    <div class="h4 fw-bold">{{ total_users|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'owner_reports_orders' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Orders (today) :</h6>
+                    <div class="h4 fw-bold">{{ total_orders|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'owner_reports_payments' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Payments (today) :</h6>
+                    <div class="h4 fw-bold">{{ total_payments|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'owner_inventory' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Snacks :</h6>
+                    <div class="h4 fw-bold">{{ total_snacks|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Recent Orders</h4>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Price (₹)</th>
+                        <th>Time</th>
+                        <th>View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>#{{ order.order_id }}</td>
+                        <td>{{ order.user.user_name }}</td>
+                        <td>{{ order.status }}</td>
+                        <td>{{ order.price }}</td>
+                        <td>{{ order.order_time }}</td>
+                        <td>
+                            <a href="{% url 'owner_view_order' order.order_id %}"
+                               class="btn btn-sm btn-outline-secondary">
+                                Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            No recent orders.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

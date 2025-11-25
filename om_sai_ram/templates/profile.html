@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body">
+                    <h4 class="mb-3">My Profile</h4>
+
+                    {% if user %}
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Name</dt>
+                            <dd class="col-sm-8">{{ user.user_name }}</dd>
+
+                            <dt class="col-sm-4">Email</dt>
+                            <dd class="col-sm-8">{{ user.email }}</dd>
+
+                            <dt class="col-sm-4">Mobile</dt>
+                            <dd class="col-sm-8">{{ user.mobile }}</dd>
+                        </dl>
+                    {% else %}
+                        <p class="text-muted">No user information found. Please log in again.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                    &larr; Back to Home
+                </a>
+
+                {% if user %}
+                <form method="post"
+                      action="{% url 'delete_profile' %}"
+                      onsubmit="return confirm('Are you sure? This will delete your account!');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        Delete Profile
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
