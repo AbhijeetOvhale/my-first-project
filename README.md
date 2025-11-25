@@ -69,4 +69,4 @@ To test the Owner Dashboard, use the following credentials:
 *(Note: Customers can register a new account on the signup page.)*
 
 ## 📸 Screenshots
-video of ordering snacks and screenshots are in running running_demo.
+screenshots are in running_demo folder.
