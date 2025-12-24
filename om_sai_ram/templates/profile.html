@@ -12,18 +12,18 @@
                     <h4 class="mb-3">My Profile</h4>
 
                     {% if user %}
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">Name</dt>
-                            <dd class="col-sm-8">{{ user.user_name }}</dd>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Name</dt>
+                        <dd class="col-sm-8">{{ user.user_name }}</dd>
 
-                            <dt class="col-sm-4">Email</dt>
-                            <dd class="col-sm-8">{{ user.email }}</dd>
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">{{ user.email }}</dd>
 
-                            <dt class="col-sm-4">Mobile</dt>
-                            <dd class="col-sm-8">{{ user.mobile }}</dd>
-                        </dl>
+                        <dt class="col-sm-4">Mobile</dt>
+                        <dd class="col-sm-8">{{ user.mobile }}</dd>
+                    </dl>
                     {% else %}
-                        <p class="text-muted">No user information found. Please log in again.</p>
+                    <p class="text-muted">No user information found. Please log in again.</p>
                     {% endif %}
                 </div>
             </div>
@@ -34,9 +34,8 @@
                 </a>
 
                 {% if user %}
-                <form method="post"
-                      action="{% url 'delete_profile' %}"
-                      onsubmit="return confirm('Are you sure? This will delete your account!');">
+                <form method="post" action="{% url 'delete_profile' %}"
+                    onsubmit="return confirm('Are you sure? This will delete your account!');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">
                         Delete Profile

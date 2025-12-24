@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Om Sai Ram Snacks Center{% endblock %}</title>
@@ -10,7 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Poppins -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <style>
         :root {
@@ -35,10 +37,10 @@
         }
 
         .bg-overlay {
-            background: rgba(255,255,255,0.92);
+            background: rgba(255, 255, 255, 0.92);
             border-radius: 16px;
             padding: 18px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
         }
 
         .navbar {
@@ -101,8 +103,10 @@
         footer {
             background: linear-gradient(90deg, var(--brand-dark), var(--brand));
             color: #fff;
-            text-align: center;
+            /* Remove 'text-align: center;' if you want the left-alignment to work strictly */
+            /* text-align: center;  <-- Remove or comment this out */
             padding: 10px 0;
+            /* You can increase this to 20px 0 for more space */
             font-size: 0.9rem;
             font-weight: 500;
             border-radius: 8px;
@@ -112,62 +116,63 @@
 
     {% block extra_head %}{% endblock %}
 </head>
+
 <body>
-<div class="outer-container">
-    <div class="container">
-        <div class="bg-overlay">
+    <div class="outer-container">
+        <div class="container">
+            <div class="bg-overlay">
 
-            <!-- NAVBAR -->
-            <nav class="navbar navbar-expand-lg mb-3 px-3" aria-label="Main navigation">
-                <div class="container-fluid p-0">
-                    <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-                        <span class="marathi me-2">ॐ साई राम</span>
-                        <span>Snacks Centre</span>
-                    </a>
+                <!-- NAVBAR -->
+                <nav class="navbar navbar-expand-lg mb-4 px-3 fixed-top" aria-label="Main navigation">
+                    <div class="container-fluid p-0">
+                        <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                            <span class="marathi me-2">ॐ साई राम</span>
+                            <span>Snacks Centre</span>
+                        </a>
 
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#mainNavbar" aria-controls="mainNavbar"
-                            aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
-                    </button>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false"
+                            aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+                        </button>
 
-                    <div class="collapse navbar-collapse" id="mainNavbar">
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <div class="collapse navbar-collapse" id="mainNavbar">
+                            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
-                            <!-- Home -->
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
-                                   href="{% url 'home' %}">Home</a>
-                            </li>
+                                <!-- Home -->
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                                        href="{% url 'home' %}">Home</a>
+                                </li>
 
-                            {% if request.session.user and request.session.user != 'owner' %}
+                                {% if request.session.user and request.session.user != 'owner' %}
                                 <!-- Normal user links -->
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
-                                       href="{% url 'profile' %}">Profile</a>
+                                        href="{% url 'profile' %}">Profile</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.resolver_match.url_name == 'orders' %}active{% endif %}"
-                                       href="{% url 'orders' %}">My Orders</a>
+                                        href="{% url 'orders' %}">My Orders</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.resolver_match.url_name == 'live_orders' %}active{% endif %}"
-                                       href="{% url 'live_orders' %}">Live Status</a>
+                                        href="{% url 'live_orders' %}">Live Status</a>
                                 </li>
-                            {% endif %}
-                        </ul>
+                                {% endif %}
+                            </ul>
 
-                        <!-- Right side -->
-                        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+                            <!-- Right side -->
+                            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
 
-                            {% if request.session.user and request.session.user != 'owner' %}
+                                {% if request.session.user and request.session.user != 'owner' %}
                                 <!-- Cart -->
                                 <li class="nav-item">
                                     <a class="nav-link d-flex align-items-center" href="{% url 'cart' %}">
                                         <i class="bi bi-cart3 me-1"></i>
                                         <span>Cart</span>
                                         <span id="cart-count-badge"
-                                              class="badge rounded-pill ms-1 cart-count-badge {% if not cart_count %}d-none{% endif %}">
+                                            class="badge rounded-pill ms-1 cart-count-badge {% if not cart_count %}d-none{% endif %}">
                                             {{ cart_count|default:0 }}
                                         </span>
                                     </a>
@@ -177,7 +182,7 @@
                                     <a class="btn btn-sm btn-light" href="{% url 'logout' %}">Logout</a>
                                 </li>
 
-                            {% elif request.session.user == 'owner' %}
+                                {% elif request.session.user == 'owner' %}
                                 <!-- Owner logged in (user base rarely used for owner, but safe) -->
                                 <li class="nav-item me-2">
                                     <span class="navbar-text">Owner</span>
@@ -186,7 +191,7 @@
                                     <a class="btn btn-sm btn-light" href="{% url 'logout' %}">Logout</a>
                                 </li>
 
-                            {% else %}
+                                {% else %}
                                 <!-- Guest -->
                                 <li class="nav-item me-2">
                                     <a class="btn btn-sm btn-light" href="{% url 'login' %}">Login</a>
@@ -194,145 +199,214 @@
                                 <li class="nav-item">
                                     <a class="btn btn-sm btn-brand" href="{% url 'register' %}">Register</a>
                                 </li>
-                            {% endif %}
-                        </ul>
+                                {% endif %}
+                            </ul>
+                        </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
 
-            <!-- MESSAGES -->
-            {% if messages %}
+                <!-- MESSAGES -->
+                {% if messages %}
                 <div class="mb-3">
                     {% for message in messages %}
-                        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
                     {% endfor %}
                 </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- PAGE CONTENT -->
-            <div class="content-wrapper">
-                {% block content %}{% endblock %}
+                <!-- PAGE CONTENT -->
+                <div class="content-wrapper">
+                    {% block content %}{% endblock %}
+                </div>
+
+                <!-- FOOTER -->
+                <footer>
+                    <div class="container">
+                        <span>© {% now "Y" %} Om Sai Ram Snacks Centre. All rights reserved.</span>
+                        <span class="mx-2">|</span>
+                        <a href="#" class="text-white text-decoration-none fw-bold" data-bs-toggle="modal"
+                            data-bs-target="#aboutUsModal">
+                            About Us
+                        </a>
+                    </div>
+                </footer>
             </div>
-
-            <!-- FOOTER -->
-            <footer>
-                © {% now "Y" %} Om Sai Ram Snacks Centre. All rights reserved.
-            </footer>
         </div>
     </div>
-</div>
 
-<!-- Toast for JS notifications (global generic toast) -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="globalToast" class="toast text-bg-success border-0">
-        <div class="d-flex">
-            <div class="toast-body" id="globalToastBody">Done</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                    data-bs-dismiss="toast"></button>
+    <!-- Toast for JS notifications (global generic toast) -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="globalToast" class="toast text-bg-success border-0">
+            <div class="d-flex">
+                <div class="toast-body" id="globalToastBody">Done</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="modal fade" id="aboutUsModal" tabindex="-1" aria-labelledby="aboutUsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background: linear-gradient(90deg, #eb8c34, #e46a00);">
+                    <h5 class="modal-title" id="aboutUsModalLabel">
+                        <strong>ॐ साई राम Snacks Centre</strong>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
 
-<script>
-// --- CSRF helper (standard Django pattern) ---
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <p class="text-muted small">
+                            Serving authentic, hygienic, and delicious snacks since 2024.
+                        </p>
+                    </div>
+
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Owner Name</span>
+                            <span>Mr. Abhijeet Ovhale</span>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Contact</span>
+                            <!-- <a href="tel:+919876543210" class="text-decoration-none fw-bold" style="color: #e46a00;"> -->
+                            +91 98765 43210
+                            </a>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Email</span>
+                            <!--  <a href="mailto:owner@gmail.com" class="text-decoration-none" style="color: #e46a00;">   -->
+                            owner@gmail.com
+                            </a>
+                        </li>
+
+                        <li class="list-group-item">
+                            <span class="fw-bold text-secondary d-block mb-1">Address</span>
+                            <span class="text-dark">
+                                Canteen No. 3, cafeteria area,<br>
+                                Dr D Y Patil Knowledge City, Charholi (Bk), <br>
+                                Via Lohgaon, near pride world city, <br>
+                                Pune, Maharashtra 412105
+                            </span>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Opening Hours</span>
+                            <span class="badge bg-dark">12:00 AM - 7:00 PM</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="modal-footer bg-light justify-content-center">
+                    <small class="text-muted">Thank you for visiting us!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- CSRF helper (standard Django pattern) ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- update badge in navbar ---
+        function updateCartCountDisplay(count) {
+            const badge = document.getElementById('cart-count-badge');
+            if (!badge) return;
+
+            const c = parseInt(count || 0, 10);
+            badge.textContent = c;
+
+            if (c > 0) {
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
             }
         }
-    }
-    return cookieValue;
-}
 
-// --- update badge in navbar ---
-function updateCartCountDisplay(count) {
-    const badge = document.getElementById('cart-count-badge');
-    if (!badge) return;
+        document.addEventListener('DOMContentLoaded', function () {
+            // avoid double-bind if script somehow included twice
+            if (window.__OSC_ADD_TO_CART_INIT__) return;
+            window.__OSC_ADD_TO_CART_INIT__ = true;
 
-    const c = parseInt(count || 0, 10);
-    badge.textContent = c;
-
-    if (c > 0) {
-        badge.classList.remove('d-none');
-    } else {
-        badge.classList.add('d-none');
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    // avoid double-bind if script somehow included twice
-    if (window.__OSC_ADD_TO_CART_INIT__) return;
-    window.__OSC_ADD_TO_CART_INIT__ = true;
-
-    // Setup optional "Added to cart" toast if present (home page)
-    let addToCartToastInstance = null;
-    let addToCartToastBody = null;
-    const addToCartToastEl = document.getElementById('addToCartToast');
-    if (addToCartToastEl && window.bootstrap && bootstrap.Toast) {
-        addToCartToastInstance = new bootstrap.Toast(addToCartToastEl);
-        addToCartToastBody = document.getElementById('addToCartToastBody');
-    }
-
-    // Delegate clicks on any ".btn-add-to-cart" button
-    document.body.addEventListener('click', function (e) {
-        const btn = e.target.closest('.btn-add-to-cart');
-        if (!btn) return;
-
-        e.preventDefault();
-
-        const snackId = btn.getAttribute('data-snack-id');
-        if (!snackId) return;
-
-        fetch("{% url 'add_to_cart' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            body: JSON.stringify({
-                snack_id: snackId,
-                quantity: 1
-            })
-        })
-        .then(resp => resp.json())
-        .then(data => {
-            if (data.success) {
-                // ✅ update navbar badge
-                updateCartCountDisplay(data.cart_count);
-
-                // ✅ show toast on pages that have home toast markup
-                if (addToCartToastInstance) {
-                    if (addToCartToastBody) {
-                        addToCartToastBody.textContent = "Added to cart.";
-                    }
-                    addToCartToastInstance.show();
-                }
-            } else if (data.error === "login required") {
-                window.location.href = "{% url 'login' %}";
-            } else {
-                console.error("Add to cart error:", data);
+            // Setup optional "Added to cart" toast if present (home page)
+            let addToCartToastInstance = null;
+            let addToCartToastBody = null;
+            const addToCartToastEl = document.getElementById('addToCartToast');
+            if (addToCartToastEl && window.bootstrap && bootstrap.Toast) {
+                addToCartToastInstance = new bootstrap.Toast(addToCartToastEl);
+                addToCartToastBody = document.getElementById('addToCartToastBody');
             }
-        })
-        .catch(err => {
-            console.error("Network error while adding to cart:", err);
-        });
-    });
-});
-</script>
 
-{% block extra_scripts %}{% endblock %}
+            // Delegate clicks on any ".btn-add-to-cart" button
+            document.body.addEventListener('click', function (e) {
+                const btn = e.target.closest('.btn-add-to-cart');
+                if (!btn) return;
+
+                e.preventDefault();
+
+                const snackId = btn.getAttribute('data-snack-id');
+                if (!snackId) return;
+
+                fetch("{% url 'add_to_cart' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie("csrftoken"),
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify({
+                        snack_id: snackId,
+                        quantity: 1
+                    })
+                })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (data.success) {
+                            // ✅ update navbar badge
+                            updateCartCountDisplay(data.cart_count);
+
+                            // ✅ show toast on pages that have home toast markup
+                            if (addToCartToastInstance) {
+                                if (addToCartToastBody) {
+                                    addToCartToastBody.textContent = "Added to cart.";
+                                }
+                                addToCartToastInstance.show();
+                            }
+                        } else if (data.error === "login required") {
+                            window.location.href = "{% url 'login' %}";
+                        } else {
+                            console.error("Add to cart error:", data);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Network error while adding to cart:", err);
+                    });
+            });
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>

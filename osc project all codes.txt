@@ -1,0 +1,4723 @@
+1) D:\Project\OnlineSnacksCenter\om_sai_ram
+
+
+
+#models.py
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.utils import timezone
+from django.conf import settings
+
+
+class User(models.Model):
+    user_id = models.AutoField(primary_key=True)
+    user_name = models.CharField(max_length=100)
+    email = models.EmailField(max_length=100, unique=True)
+    mobile = models.CharField(max_length=10, unique=True)
+    password = models.CharField(max_length=128)  # plain-text like Flask (simple)
+
+    def __str__(self):
+        return f"{self.user_name} ({self.user_id})"
+
+
+class Snack(models.Model):
+    snack_id = models.AutoField(primary_key=True)
+    snack_name = models.CharField(max_length=150)
+    price = models.PositiveIntegerField(
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text="Price in rupees (positive integer)."
+    )
+    available_quantity = models.IntegerField(
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text="Quantity in stock (0 means out of stock)."
+    )
+    image = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Snack image file name in static/images/, e.g. 'vada-pav.jpg'."
+    )
+
+    def __str__(self):
+        return f"{self.snack_name} ({self.snack_id})"
+
+
+class Cart(models.Model):
+    cart_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carts')
+
+    def __str__(self):
+        return f"Cart {self.cart_id} user={self.user_id}"
+
+
+class CartItem(models.Model):
+    cart_item_id = models.AutoField(primary_key=True)
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    snack = models.ForeignKey(Snack, on_delete=models.CASCADE, related_name='cart_items')
+    quantity = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="Quantity must be at least 1."
+    )
+
+    def __str__(self):
+        return f"CartItem {self.cart_item_id} cart={self.cart_id} snack={self.snack_id} qty={self.quantity}"
+
+
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Paid', 'Paid'),
+        ('Preparing', 'Preparing'),
+        ('Ready', 'Ready'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    ]
+
+    order_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders'
+    )
+    order_time = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
+    price = models.PositiveIntegerField(
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"Order {self.order_id} user={self.user_id} status={self.status}"
+
+
+class OrderItem(models.Model):
+    order_item_id = models.AutoField(primary_key=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    snack = models.ForeignKey(Snack, on_delete=models.CASCADE, related_name='order_items')
+    quantity = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)]
+    )
+
+    def __str__(self):
+        return f"OrderItem {self.order_item_id} order={self.order_id} snack={self.snack_id} qty={self.quantity}"
+
+
+class Payment(models.Model):
+    MODE_CHOICES = [
+        ('Cash', 'Cash'),
+        ('Cashless', 'Cashless'),
+    ]
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Completed', 'Completed'),
+        ('Failed', 'Failed'),
+    ]
+
+    payment_id = models.AutoField(primary_key=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
+    mode = models.CharField(max_length=50, choices=MODE_CHOICES, blank=True, null=True)
+    payment_time = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
+
+    def __str__(self):
+        return f"Payment {self.payment_id} order={self.order_id} mode={self.mode} status={self.status}"
+
+
+class Feedback(models.Model):
+    feedback_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedbacks')
+    rating = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
+        null=True,
+        blank=True
+    )
+    feedback_time = models.DateTimeField(default=timezone.now)
+    feedback_content = models.CharField(
+        max_length=getattr(settings, 'FEEDBACK_MAX_LENGTH', 350),
+        blank=True,
+        help_text="Max 350 characters."
+    )
+
+    def __str__(self):
+        return f"Feedback {self.feedback_id} user={self.user_id} rating={self.rating}"
+
+
+
+#urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.register, name='register'),         
+    path('home/', views.home, name='home'),            
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('profile/', views.profile, name='profile'),
+    path('profile/delete/', views.delete_profile, name='delete_profile'),
+    path('cart/', views.cart_view, name='cart'),
+    path('cart/update_item/', views.update_cart_item, name='update_cart_item'),
+    path('add_to_cart/', views.add_to_cart, name='add_to_cart'),
+    path('checkout/', views.checkout, name='checkout'),
+    path('payment/<str:method>/', views.payment, name='payment'),
+    path('feedback/', views.feedback, name='feedback'),
+    path('confirm_payment/<str:method>/', views.confirm_payment, name='confirm_payment'),
+    path('orders/', views.orders, name='orders'),
+    path('live-orders/', views.live_orders, name='live_orders'),
+
+    # AJAX APIs (for JS auto-refresh, no page reload)
+    path('api/cart-count/', views.api_cart_count, name='api_cart_count'),
+    path('api/order-status/<int:order_id>/', views.api_order_status, name='api_order_status'),
+    path('api/user-latest-orders/', views.api_user_latest_orders, name='api_user_latest_orders'),
+
+    # owner side
+    path('owner/dashboard/', views.owner_dashboard, name='owner_dashboard'),
+    path('owner/customers/', views.owner_customers, name='owner_customers'),
+
+    path('owner/feedbacks/', views.owner_feedbacks_list, name='owner_feedbacks_list'),
+    path('owner/feedbacks/delete/<int:feedback_id>/', views.owner_delete_feedback, name='owner_delete_feedback'),
+
+    path('owner/orders/', views.owner_orders_list, name='owner_orders_list'),
+    path('owner/orders/change_status/<int:order_id>/', views.owner_change_order_status, name='owner_change_order_status'),
+    path('owner/orders/view/<int:order_id>/', views.owner_view_order, name='owner_view_order'),
+
+    path('owner/payments/', views.owner_payments_list, name='owner_payments_list'),
+    path('owner/payments/change_status/<int:payment_id>/', views.owner_change_payment_status, name='owner_change_payment_status'),
+
+    path('owner/inventory/', views.owner_inventory, name='owner_inventory'),
+    path('owner/inventory/update/<int:snack_id>/', views.owner_update_inventory, name='owner_update_inventory'),
+    path('owner/snacks/add/', views.owner_add_snack, name='owner_add_snack'),
+    path('owner/snacks/delete/<int:snack_id>/', views.owner_delete_snack, name='owner_delete_snack'),
+
+    path('owner/reports/', views.owner_reports, name='owner_reports'),
+    path('owner/reports/orders/', views.owner_reports_orders, name='owner_reports_orders'),
+    path('owner/reports/payments/', views.owner_reports_payments, name='owner_reports_payments'),
+
+]
+
+
+
+#views.py
+from datetime import timedelta, datetime
+import io
+import re
+import json
+import os
+
+from django.conf import settings
+from django.db.models import Sum, Q
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
+
+
+from .models import User, Snack, Cart, CartItem, Order, OrderItem, Payment, Feedback
+
+
+# --------- helpers / constants --------- #
+
+OWNER_EMAIL = getattr(settings, "OWNER_EMAIL", "owner@gmail.com")
+OWNER_PASSWORD = getattr(settings, "OWNER_PASSWORD", "owner123")
+FEEDBACK_MAX_LENGTH = getattr(settings, "FEEDBACK_MAX_LENGTH", 350)
+
+# Snack seed data: name, price, image file name (in static/images/)
+SNACKS_SEED = [
+    ("Vada Pav", 20, "vada-pav.jpg"),
+    ("Medu Vada", 30, "medu-vada.jpg"),
+    ("Sabudana Vada", 30, "sabudana-vada.jpg"),
+    ("Sabudana Khichadi", 40, "sabudana-khichadi.jpg"),
+    ("Samosa", 20, "samosa.jpg"),
+    ("Pohe", 20, "pohe.jpg"),
+    ("Sheera", 20, "sheera.jpg"),
+    ("Misal Pav", 70, "misal-pav.jpg"),
+    ("Bhel", 50, "bhel.jpg"),
+    ("Pav Bhaji", 60, "pav-bhaji.jpg"),
+    ("Kanda Bhaji", 30, "kanda-bhaji.jpg"),
+    ("Alu Vadi", 40, "alu-vadi.jpg"),
+    ("Batata Bhaji", 30, "batata-bhaji.jpg"),
+    ("Panipuri", 20, "panipuri.jpg"),
+    ("Bharli Vangi", 70, "bharli-vangi.jpg"),
+    ("Puran Poli", 30, "puran-poli.jpg"),
+    ("Shrikhand Puri", 80, "shrikhand-puri.jpg"),
+    ("Thalipeeth", 30, "thalipeeth.jpg"),
+    ("Upma", 20, "upma.jpg"),
+    ("Dosa", 30, "dosa.jpg"),
+    ("Idli", 30, "idli.jpg"),
+    ("Uttapa", 30, "uttapa.jpg"),
+    ("Chaha", 10, "chaha.jpg"),
+    ("Coffee", 10, "coffee.jpg"),
+]
+
+
+def is_ajax(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def valid_full_name(name: str) -> bool:
+    if not name:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z\s]{2,100}", name.strip()))
+
+
+def valid_email(email: str) -> bool:
+    if not email:
+        return False
+    email = email.strip()
+    pattern = r"^[A-Za-z0-9._%+-]+@gmail\.com$"
+    return bool(re.fullmatch(pattern, email))
+
+
+def get_current_user(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    try:
+        return User.objects.get(user_id=user_id)
+    except User.DoesNotExist:
+        return None
+
+
+def get_logged_in_user(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    try:
+        return User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return None
+
+
+def get_or_create_cart_for_user(user):
+    """
+    Always return a single Cart for this user.
+    If multiple carts exist (old data), merge their items into the first one
+    and delete the extras.
+    """
+    from .models import Cart, CartItem
+
+    carts = Cart.objects.filter(user=user).order_by("cart_id")
+
+    if carts.exists():
+        main = carts.first()
+        extras = list(carts[1:])  # any extra carts (bad old data)
+
+        if extras:
+            # Move all items from extra carts to the main cart
+            extra_ids = [c.pk for c in extras]
+            CartItem.objects.filter(cart__in=extra_ids).update(cart=main)
+            # Delete the extra carts
+            Cart.objects.filter(pk__in=extra_ids).delete()
+
+        return main
+
+    # No cart yet -> create fresh
+    return Cart.objects.create(user=user)
+
+
+def get_cart_count(user):
+    if not user:
+        return 0
+    cart = Cart.objects.filter(user=user).first()
+    if not cart:
+        return 0
+    total = cart.items.aggregate(total=Sum("quantity"))["total"] or 0
+    return int(total)
+
+
+def owner_required(request):
+    return request.session.get("user") == "owner"
+
+
+def seed_snacks_if_empty():
+    """
+    Seed some default snacks once, if DB is empty.
+    Also store image file name so we can use it from DB.
+    We expect all corresponding files in static/images/.
+    """
+    if Snack.objects.exists():
+        return
+
+    for name, price, image_file in SNACKS_SEED:
+        Snack.objects.create(
+            snack_name=name,
+            price=price,
+            available_quantity=100,
+            image=image_file,  # just "vada-pav.jpg", etc.
+        )
+
+
+# -------------- user views -------------- #
+
+
+def home(request):
+    """Home page, snack grid; default landing."""
+    seed_snacks_if_empty()
+    user = get_current_user(request)
+    snacks = Snack.objects.order_by("snack_id")
+    cart_count = get_cart_count(user)
+
+    return render(
+        request,
+        "home.html",
+        {
+            "user": user,
+            "snacks": snacks,
+            "cart_count": cart_count,
+        },
+    )
+
+
+def register(request):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        email = request.POST.get("email", "").strip()
+        mobile = request.POST.get("mobile", "").strip()
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        if not valid_full_name(name):
+            messages.error(
+                request, "Name must contain only letters and spaces (2–100 characters)."
+            )
+            return redirect("register")
+
+        if not mobile.isdigit() or len(mobile) != 10:
+            messages.error(request, "Mobile number must be exactly 10 digits.")
+            return redirect("register")
+
+        if not valid_email(email):
+            messages.error(request, "Please enter a valid Gmail address.")
+            return redirect("register")
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect("register")
+
+        existing = User.objects.filter(Q(email=email) | Q(mobile=mobile)).first()
+        if existing:
+            if existing.email == email:
+                messages.warning(request, "This email is already registered.")
+            else:
+                messages.warning(request, "This mobile number is already registered.")
+            return redirect("register")
+
+        User.objects.create(
+            user_name=name, email=email, mobile=mobile, password=password
+        )
+        messages.success(request, "Registration successful. Please log in.")
+        return redirect("login")
+
+    return render(request, "register.html")
+
+
+def login_view(request):
+    if request.method == "POST":
+        identifier = request.POST.get("identifier", "").strip()
+        password = request.POST.get("password", "")
+
+        # Owner login from same page
+        if identifier == OWNER_EMAIL and password == OWNER_PASSWORD:
+            request.session["user"] = "owner"
+            request.session.pop("user_id", None)
+            return redirect("owner_dashboard")
+
+        # Normal customer login
+        user = User.objects.filter(
+            Q(email=identifier) | Q(mobile=identifier), password=password
+        ).first()
+
+        if user:
+            request.session["user_id"] = user.user_id
+            request.session["user"] = user.user_name
+            return redirect("home")
+
+        messages.error(request, "Invalid email/mobile or password.")
+
+    return render(request, "login.html")
+
+
+def logout_view(request):
+    request.session.flush()
+    messages.info(request, "Logged out successfully.")
+    return redirect("login")
+
+
+def profile(request):
+    user = get_current_user(request)
+    if not user:
+        messages.warning(request, "Please log in to view profile.")
+        return redirect("login")
+    return render(request, "profile.html", {"user": user})
+
+
+@require_POST
+def delete_profile(request):
+    """
+    Delete the currently logged-in user's account, but keep all orders/payments.
+    Carts are removed, orders remain with user=NULL.
+    """
+    # don't allow owner account deletion through this
+    if request.session.get("user") == "owner":
+        messages.error(request, "Owner account cannot be deleted from here.")
+        return redirect("profile")
+
+    user = get_current_user(request)
+    if not user:
+        messages.warning(request, "Please log in first.")
+        return redirect("login")
+
+    # Delete user's cart (cart + cart items) – safe to remove
+    from .models import Cart
+
+    Cart.objects.filter(user=user).delete()
+
+    # Orders are NOT deleted because Order.user uses SET_NULL now
+
+    # Delete the user account
+    user.delete()
+
+    # Clear session
+    request.session.flush()
+    messages.success(
+        request,
+        "Your account has been deleted. Your previous orders and payments history are still stored for records.",
+    )
+    return redirect("register")
+
+
+def orders(request):
+    user = get_current_user(request)
+    if not user:
+        messages.warning(request, "Please log in to view orders.")
+        return redirect("login")
+
+    orders_qs = user.orders.order_by("-order_time")
+    return render(
+        request,
+        "orders.html",
+        {
+            "user": user,
+            "orders": orders_qs,
+            "cart_count": get_cart_count(user),
+        },
+    )
+
+
+def cart_view(request):
+    user = get_logged_in_user(request)
+    if not user or request.session.get("user") == "owner":
+        messages.warning(request, "Please log in as customer to view cart.")
+        return redirect("login")
+
+    cart = get_or_create_cart_for_user(user)
+    cart_items = CartItem.objects.filter(cart=cart).select_related("snack")
+
+    items = []
+    total = 0
+    for ci in cart_items:
+        snack = ci.snack
+        price = snack.price if snack else 0
+        qty = ci.quantity or 0
+        subtotal = price * qty
+        total += subtotal
+        items.append(
+            {
+                "id": ci.pk,
+                "snack_name": snack.snack_name if snack else "Item",
+                "price": price,
+                "qty": qty,
+                "subtotal": subtotal,
+            }
+        )
+
+    cart_count = cart_items.aggregate(total_qty=Sum("quantity"))["total_qty"] or 0
+
+    context = {
+        "items": items,
+        "total": total,
+        "cart_count": cart_count,
+    }
+    return render(request, "cart.html", context)
+
+
+@require_POST
+def add_to_cart(request):
+    # Block not-logged-in or owner from this user action
+    if not request.session.get("user_id") or request.session.get("user") == "owner":
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "error": "login required"})
+        return redirect("login")
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        data = request.POST
+
+    snack_id = data.get("snack_id")
+    quantity = data.get("quantity", 1)
+
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        quantity = 1
+
+    if quantity < 1:
+        quantity = 1
+
+    user_id = request.session["user_id"]
+    user = User.objects.get(pk=user_id)
+    snack = get_object_or_404(Snack, pk=snack_id)
+
+    # 🔑 USE HELPER HERE (handles duplicates)
+    cart = get_or_create_cart_for_user(user)
+
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart, snack=snack, defaults={"quantity": 0}
+    )
+
+    cart_item.quantity = (cart_item.quantity or 0) + quantity
+    cart_item.save()
+
+    cart_count = (
+        CartItem.objects.filter(cart=cart).aggregate(total=Sum("quantity"))["total"]
+        or 0
+    )
+
+    return JsonResponse({"success": True, "cart_count": int(cart_count)})
+
+
+@require_POST
+def update_cart_item(request):
+    user = get_logged_in_user(request)
+    if not user or request.session.get("user") == "owner":
+        return redirect("login")
+
+    cart = get_or_create_cart_for_user(user)
+
+    cart_item_id = request.POST.get("cart_item_id")
+    action = request.POST.get("action")
+
+    if not cart_item_id or not action:
+        return redirect("cart")
+
+    try:
+        cart_item = CartItem.objects.select_related("snack", "cart").get(
+            pk=int(cart_item_id), cart=cart
+        )
+    except (ValueError, CartItem.DoesNotExist):
+        return redirect("cart")
+
+    snack = cart_item.snack
+    available = (
+        snack.available_quantity
+        if snack and snack.available_quantity is not None
+        else 0
+    )
+
+    if action == "increase":
+        new_qty = (cart_item.quantity or 0) + 1
+        # if available is 0, treat as infinite
+        if available == 0 or new_qty <= available:
+            cart_item.quantity = new_qty
+            cart_item.save()
+
+    elif action == "decrease":
+        new_qty = (cart_item.quantity or 0) - 1
+        if new_qty <= 0:
+            cart_item.delete()
+        else:
+            cart_item.quantity = new_qty
+            cart_item.save()
+
+    elif action == "remove":
+        cart_item.delete()
+
+    return redirect("cart")
+
+
+def checkout(request):
+    user = get_current_user(request)
+    if not user:
+        return redirect("login")
+
+    cart = get_or_create_cart_for_user(user)
+    items = cart.items.select_related("snack")
+    if not items.exists():
+        return redirect("cart")
+
+    total = 0
+    details = []
+    for it in items:
+        snack = it.snack
+        if not snack:
+            continue
+        price = snack.price or 0
+        qty = it.quantity or 0
+        subtotal = price * qty
+        total += subtotal
+        details.append(
+            {
+                "cart_item_id": it.cart_item_id,
+                "snack_id": snack.snack_id,
+                "snack_name": snack.snack_name,
+                "price": price,
+                "qty": qty,
+                "subtotal": subtotal,
+                "available": snack.available_quantity or 0,
+            }
+        )
+
+    return render(
+        request,
+        "checkout.html",
+        {
+            "user": user,
+            "items": details,
+            "total": total,
+            "cart_count": get_cart_count(user),
+        },
+    )
+
+
+def view_order(request, order_id):
+    order = get_object_or_404(Order, order_id=order_id)
+    items = order.items.select_related("snack")
+    return render(
+        request,
+        "view_order.html",
+        {
+            "order": order,
+            "items": items,
+        },
+    )
+
+
+def payment(request, method):
+    user = get_current_user(request)
+    if not user:
+        return redirect("login")
+
+    if method not in ("cash", "cashless"):
+        return redirect("checkout")
+
+    cart = get_or_create_cart_for_user(user)
+    items = cart.items.select_related("snack")
+    if not items.exists():
+        return redirect("cart")
+
+    total = 0
+    details = []
+    for it in items:
+        snack = it.snack
+        price = snack.price or 0 if snack else 0
+        qty = it.quantity or 0
+        subtotal = price * qty
+        total += subtotal
+        details.append(
+            {
+                "snack_name": snack.snack_name if snack else "Item",
+                "qty": qty,
+                "price": price,
+                "subtotal": subtotal,
+            }
+        )
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "cancel":
+            return redirect("checkout")
+        if action == "done":
+            return redirect(f"{reverse('feedback')}?method={method}")
+
+    return render(
+        request,
+        "payment.html",
+        {
+            "user": user,
+            "method": method,
+            "items": details,
+            "total": total,
+            "cart_count": get_cart_count(user),
+        },
+    )
+
+
+def feedback(request):
+    user = get_current_user(request)
+    if not user:
+        return redirect("login")
+
+    method = request.GET.get("method") or request.POST.get("method") or "cash"
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "skip":
+            return redirect("confirm_payment", method=method)
+
+        try:
+            rating = int(request.POST.get("rating") or 0)
+        except (TypeError, ValueError):
+            rating = 0
+
+        content = (request.POST.get("feedback_content") or "").strip()
+        if len(content) > FEEDBACK_MAX_LENGTH:
+            content = content[:FEEDBACK_MAX_LENGTH]
+
+        Feedback.objects.create(
+            user=user,
+            rating=rating or None,
+            feedback_content=content,
+            feedback_time=timezone.now(),
+        )
+        return redirect("confirm_payment", method=method)
+
+    return render(
+        request,
+        "feedback.html",
+        {
+            "user": user,
+            "method": method,
+            "cart_count": get_cart_count(user),
+        },
+    )
+
+
+def confirm_payment(request, method):
+    user = get_current_user(request)
+    if not user:
+        return redirect("login")
+
+    if method not in ("cash", "cashless"):
+        return redirect("checkout")
+
+    cart = get_or_create_cart_for_user(user)
+    items = cart.items.select_related("snack")
+    if not items.exists():
+        return redirect("cart")
+
+    total = 0
+    insufficient = []
+
+    for it in items:
+        snack = it.snack
+        if not snack:
+            insufficient.append(f"Item {it.cart_item_id} not found.")
+            continue
+
+        available = snack.available_quantity or 0
+        if available < (it.quantity or 0):
+            insufficient.append(f"Only {available} left for {snack.snack_name}.")
+        total += (snack.price or 0) * (it.quantity or 0)
+
+    if insufficient:
+        messages.warning(
+            request, "Some items are out of stock, please update your cart."
+        )
+        return redirect("cart")
+
+    status = "Pending"
+    order = Order.objects.create(
+        user=user,
+        order_time=timezone.now(),
+        status=status,
+        price=int(total),
+    )
+
+    for it in items:
+        if not it.snack:
+            continue
+        OrderItem.objects.create(order=order, snack=it.snack, quantity=it.quantity or 0)
+        if it.snack.available_quantity is not None:
+            new_qty = max(0, (it.snack.available_quantity or 0) - (it.quantity or 0))
+            it.snack.available_quantity = new_qty
+            it.snack.save(update_fields=["available_quantity"])
+
+    Payment.objects.create(
+        order=order,
+        mode="Cash" if method == "cash" else "Cashless",
+        payment_time=timezone.now(),
+        status="Pending",
+    )
+
+    items.delete()
+    return redirect("orders")
+
+
+def live_orders(request):
+    """
+    Live status page: user sees today's orders only.
+    JS will poll API so no full page refresh.
+    """
+    user = get_current_user(request)
+    if not user:
+        messages.warning(request, "Please log in to see your live orders.")
+        return redirect("login")
+
+    today = timezone.localdate()  # today's date in server timezone
+
+    orders_qs = user.orders.filter(order_time__date=today).order_by("-order_time")
+
+    return render(
+        request,
+        "live_orders.html",
+        {
+            "user": user,
+            "orders": orders_qs,
+            "cart_count": get_cart_count(user),
+        },
+    )
+
+
+# ---------- AJAX / JSON API ---------- #
+
+
+def api_cart_count(request):
+    user = get_current_user(request)
+    return JsonResponse({"cart_count": get_cart_count(user)})
+
+
+def api_order_status(request, order_id):
+    user = get_current_user(request)
+    if not user:
+        return JsonResponse({"error": "login required"}, status=401)
+
+    order = get_object_or_404(Order, pk=order_id, user=user)
+    payment = order.payments.order_by("-payment_time").first()
+    return JsonResponse(
+        {
+            "order_id": order.order_id,
+            "status": order.status,
+            "price": order.price,
+            "order_time": order.order_time.isoformat(),
+            "payment_status": payment.status if payment else None,
+            "payment_mode": payment.mode if payment else None,
+        }
+    )
+
+
+def api_user_latest_orders(request):
+    user = get_current_user(request)
+    if not user:
+        return JsonResponse({"error": "login required"}, status=401)
+
+    today = timezone.localdate()
+
+    orders_qs = user.orders.filter(order_time__date=today).order_by("-order_time")[:10]
+
+    data = []
+    for o in orders_qs:
+        payment = o.payments.order_by("-payment_time").first()
+        data.append(
+            {
+                "order_id": o.order_id,
+                "status": o.status,
+                "price": o.price,
+                "order_time": o.order_time.isoformat(),
+                "payment_status": payment.status if payment else None,
+                "payment_mode": payment.mode if payment else None,
+            }
+        )
+    return JsonResponse({"orders": data})
+
+
+# -------------- owner views -------------- #
+
+
+def owner_dashboard(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    # Today (local date)
+    today = timezone.localdate()
+
+    total_users = User.objects.count()
+
+    # ✅ only completed orders for today
+    total_orders = Order.objects.filter(
+        status="Completed", order_time__date=today
+    ).count()
+
+    # ✅ only completed payments for today
+    total_payments = Payment.objects.filter(
+        status="Completed", payment_time__date=today
+    ).count()
+
+    total_snacks = Snack.objects.count()
+
+    # ✅ recent orders for today only
+    recent_orders = Order.objects.filter(order_time__date=today).order_by(
+        "-order_time"
+    )[:6]
+
+    return render(
+        request,
+        "owner/dashboard.html",
+        {
+            "total_users": total_users,
+            "total_orders": total_orders,
+            "total_payments": total_payments,
+            "total_snacks": total_snacks,
+            "recent_orders": recent_orders,
+            "today": today,
+        },
+    )
+
+
+def owner_customers(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    # Owner CAN ONLY VIEW – no POST actions here
+
+    q_name = request.GET.get("q_name", "").strip()
+    q_email = request.GET.get("q_email", "").strip()
+    q_mobile = request.GET.get("q_mobile", "").strip()
+
+    users_qs = User.objects.all()
+    if q_name:
+        users_qs = users_qs.filter(user_name__icontains=q_name)
+    if q_email:
+        users_qs = users_qs.filter(email__icontains=q_email)
+    if q_mobile:
+        users_qs = users_qs.filter(mobile__icontains=q_mobile)
+
+    users_qs = users_qs.order_by("user_id")
+
+    return render(
+        request,
+        "owner/customers.html",
+        {
+            "users": users_qs,
+            "q_name": q_name,
+            "q_email": q_email,
+            "q_mobile": q_mobile,
+        },
+    )
+
+
+def owner_feedbacks_list(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    feedbacks = Feedback.objects.select_related("user").order_by("-feedback_time")
+    return render(
+        request,
+        "owner/feedbacks.html",
+        {
+            "feedbacks": feedbacks,
+        },
+    )
+
+
+@require_POST
+def owner_delete_feedback(request, feedback_id):
+    if not owner_required(request):
+        return redirect("login")
+    Feedback.objects.filter(feedback_id=feedback_id).delete()
+    return redirect("owner_feedbacks_list")
+
+
+def owner_orders_list(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    today = timezone.localdate()
+
+    q_user = request.GET.get("q_user", "").strip()
+    q_status = request.GET.get("q_status", "").strip()
+
+    # ✅ ONLY today’s orders
+    orders_qs = Order.objects.filter(order_time__date=today)
+
+    if q_user:
+        orders_qs = orders_qs.filter(
+            Q(user__user_name__icontains=q_user) | Q(user__email__icontains=q_user)
+        )
+    if q_status:
+        orders_qs = orders_qs.filter(status=q_status)
+
+    orders_qs = orders_qs.order_by("-order_time")
+
+    return render(
+        request,
+        "owner/orders.html",
+        {
+            "orders": orders_qs,
+            "q_user": q_user,
+            "q_status": q_status,
+            "today": today,
+        },
+    )
+
+
+@require_POST
+def owner_change_order_status(request, order_id):
+    if not owner_required(request):
+        return redirect("login")
+
+    new_status = request.POST.get("status")
+    if new_status:
+        Order.objects.filter(order_id=order_id).update(status=new_status)
+    return redirect("owner_orders_list")
+
+
+def owner_view_order(request, order_id):
+    if not owner_required(request):
+        return redirect("login")
+
+    order = get_object_or_404(Order, order_id=order_id)
+    items = order.items.select_related("snack")
+    return render(
+        request,
+        "owner/order_view.html",
+        {
+            "order": order,
+            "items": items,
+        },
+    )
+
+
+def owner_payments_list(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    today = timezone.localdate()
+
+    q_order = request.GET.get("q_order", "").strip()
+    q_mode = request.GET.get("q_mode", "").strip()
+    q_status = request.GET.get("q_status", "").strip()
+
+    # ✅ ONLY today’s payments
+    payments_qs = Payment.objects.select_related("order").filter(
+        payment_time__date=today
+    )
+
+    if q_order:
+        try:
+            order_id = int(q_order)
+            payments_qs = payments_qs.filter(order__order_id=order_id)
+        except ValueError:
+            pass
+    if q_mode:
+        payments_qs = payments_qs.filter(mode__icontains=q_mode)
+    if q_status:
+        payments_qs = payments_qs.filter(status=q_status)
+
+    payments_qs = payments_qs.order_by("-payment_time")
+
+    return render(
+        request,
+        "owner/payments.html",
+        {
+            "payments": payments_qs,
+            "q_order": q_order,
+            "q_mode": q_mode,
+            "q_status": q_status,
+            "today": today,
+        },
+    )
+
+
+@require_POST
+def owner_change_payment_status(request, payment_id):
+    if not owner_required(request):
+        return redirect("login")
+
+    new_status = request.POST.get("status")
+    if new_status:
+        Payment.objects.filter(payment_id=payment_id).update(status=new_status)
+    return redirect("owner_payments_list")
+
+
+def owner_inventory(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    snacks = Snack.objects.order_by("snack_id")
+    return render(request, "owner/inventory.html", {"snacks": snacks})
+
+
+@require_POST
+def owner_update_inventory(request, snack_id):
+    if not owner_required(request):
+        return redirect("login")
+
+    snack = get_object_or_404(Snack, snack_id=snack_id)
+
+    name = request.POST.get("snack_name") or snack.snack_name
+    price_raw = request.POST.get("price", "").strip()
+    qty_raw = request.POST.get("available_quantity", "").strip()
+
+    snack.snack_name = name
+
+    if price_raw:
+        try:
+            price_val = int(price_raw)
+            if price_val < 0:
+                price_val = 0
+            snack.price = price_val
+        except ValueError:
+            pass
+
+    if qty_raw:
+        try:
+            qty_val = int(qty_raw)
+            if qty_val < 0:
+                qty_val = 0
+            snack.available_quantity = qty_val
+        except ValueError:
+            pass
+
+    snack.save()
+    return redirect("owner_inventory")
+
+
+def owner_add_snack(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    if request.method == "POST":
+        name = (request.POST.get("snack_name") or "").strip()
+        price_raw = request.POST.get("price", "").strip()
+        qty_raw = request.POST.get("available_quantity", "").strip()
+        uploaded = request.FILES.get("image")  # upload image from owner panel
+
+        if not name:
+            messages.error(request, "Snack name is required.")
+            return redirect("owner_add_snack")
+
+        try:
+            price_val = int(price_raw or 0)
+        except ValueError:
+            price_val = 0
+        if price_val < 0:
+            price_val = 0
+
+        try:
+            qty_val = int(qty_raw or 0)
+        except ValueError:
+            qty_val = 0
+        if qty_val < 0:
+            qty_val = 0
+
+        image_name = None
+        if uploaded:
+            images_dir = os.path.join(settings.BASE_DIR, "static", "images")
+            os.makedirs(images_dir, exist_ok=True)
+            image_name = uploaded.name
+            image_path = os.path.join(images_dir, image_name)
+            with open(image_path, "wb+") as dest:
+                for chunk in uploaded.chunks():
+                    dest.write(chunk)
+
+        Snack.objects.create(
+            snack_name=name,
+            price=price_val,
+            available_quantity=qty_val,
+            image=image_name,
+        )
+        messages.success(request, "Snack added successfully.")
+        return redirect("owner_inventory")
+
+    return render(request, "owner/add_snack.html")
+
+
+@require_POST
+def owner_delete_snack(request, snack_id):
+    if not owner_required(request):
+        return redirect("login")
+
+    Snack.objects.filter(snack_id=snack_id).delete()
+    return redirect("owner_inventory")
+
+
+def owner_reports(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    today = timezone.localdate()
+
+    # ---- TODAY REVENUE: completed payments only ----
+    rev_agg = Payment.objects.filter(
+        status="Completed", payment_time__date=today
+    ).aggregate(total=Sum("order__price"))
+    today_revenue = int(rev_agg["total"] or 0)
+
+    # ---- TODAY ORDERS: completed orders only ----
+    today_orders_completed = Order.objects.filter(
+        status="Completed", order_time__date=today
+    ).count()
+
+    # ----- Graph date range (default last 7 days) -----
+    date_from_str = (request.GET.get("from") or "").strip()
+    date_to_str = (request.GET.get("to") or "").strip()
+
+    if date_from_str and date_to_str:
+        try:
+            date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date()
+        except ValueError:
+            date_from = today - timedelta(days=6)
+        try:
+            date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date()
+        except ValueError:
+            date_to = today
+    else:
+        # default: last 7 days including today
+        date_to = today
+        date_from = today - timedelta(days=6)
+
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    labels = []
+    values = []
+
+    current = date_from
+    tz = timezone.get_current_timezone()
+    while current <= date_to:
+        day_start = datetime.combine(current, datetime.min.time(), tzinfo=tz)
+        day_end = datetime.combine(current, datetime.max.time(), tzinfo=tz)
+
+        day_revenue = (
+            Payment.objects.filter(
+                status="Completed",
+                payment_time__gte=day_start,
+                payment_time__lte=day_end,
+            ).aggregate(total=Sum("order__price"))["total"]
+            or 0
+        )
+
+        labels.append(current.strftime("%Y-%m-%d"))
+        values.append(int(day_revenue))
+        current += timedelta(days=1)
+
+    # Popular snacks (all time)
+    popular = (
+        Snack.objects.filter(order_items__isnull=False)
+        .annotate(total_sold=Sum("order_items__quantity"))
+        .order_by("-total_sold")[:10]
+    )
+
+    return render(
+        request,
+        "owner/reports.html",
+        {
+            "today": today,
+            "today_revenue": today_revenue,
+            # expose under both names, so any template works
+            "today_orders": today_orders_completed,
+            "today_orders_count": today_orders_completed,
+            "date_from": date_from.strftime("%Y-%m-%d"),
+            "date_to": date_to.strftime("%Y-%m-%d"),
+            "chart_labels": labels,
+            "chart_values": values,
+            "popular": popular,
+        },
+    )
+
+
+def owner_reports_orders(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    date_from_str = request.GET.get("from", "").strip()
+    date_to_str = request.GET.get("to", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+
+    orders_qs = Order.objects.select_related("user").all()
+
+    if date_from_str:
+        try:
+            date_from = datetime.fromisoformat(date_from_str)
+            orders_qs = orders_qs.filter(order_time__gte=date_from)
+        except ValueError:
+            date_from = None
+    else:
+        date_from = None
+
+    if date_to_str:
+        try:
+            # include entire day
+            date_to = datetime.fromisoformat(date_to_str)
+            date_to_end = datetime.combine(
+                date_to.date(),
+                datetime.max.time(),
+                tzinfo=timezone.get_current_timezone(),
+            )
+            orders_qs = orders_qs.filter(order_time__lte=date_to_end)
+        except ValueError:
+            date_to = None
+    else:
+        date_to = None
+
+    if status_filter:
+        orders_qs = orders_qs.filter(status=status_filter)
+
+    orders_qs = orders_qs.order_by("-order_time")
+
+    paginator = Paginator(orders_qs, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    today = timezone.localdate()
+    today_completed = Order.objects.filter(
+        status="Completed", order_time__date=today
+    ).count()
+
+    return render(
+        request,
+        "owner/reports_orders.html",
+        {
+            "page_obj": page_obj,
+            "status_filter": status_filter,
+            "date_from": date_from_str,
+            "date_to": date_to_str,
+            "today": today,
+            "today_completed": today_completed,
+        },
+    )
+
+
+def owner_reports_payments(request):
+    if not owner_required(request):
+        return redirect("login")
+
+    date_from_str = request.GET.get("from", "").strip()
+    date_to_str = request.GET.get("to", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+    mode_filter = request.GET.get("mode", "").strip()
+
+    payments_qs = Payment.objects.select_related("order").all()
+
+    if date_from_str:
+        try:
+            date_from = datetime.fromisoformat(date_from_str)
+            payments_qs = payments_qs.filter(payment_time__gte=date_from)
+        except ValueError:
+            date_from = None
+    else:
+        date_from = None
+
+    if date_to_str:
+        try:
+            date_to = datetime.fromisoformat(date_to_str)
+            date_to_end = datetime.combine(
+                date_to.date(),
+                datetime.max.time(),
+                tzinfo=timezone.get_current_timezone(),
+            )
+            payments_qs = payments_qs.filter(payment_time__lte=date_to_end)
+        except ValueError:
+            date_to = None
+    else:
+        date_to = None
+
+    if status_filter:
+        payments_qs = payments_qs.filter(status=status_filter)
+
+    if mode_filter:
+        payments_qs = payments_qs.filter(mode__icontains=mode_filter)
+
+    payments_qs = payments_qs.order_by("-payment_time")
+
+    paginator = Paginator(payments_qs, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    today = timezone.localdate()
+    rev_agg = Payment.objects.filter(
+        status="Completed", payment_time__date=today
+    ).aggregate(total=Sum("order__price"))
+    today_revenue = int(rev_agg["total"] or 0)
+
+    return render(
+        request,
+        "owner/reports_payments.html",
+        {
+            "page_obj": page_obj,
+            "status_filter": status_filter,
+            "mode_filter": mode_filter,
+            "date_from": date_from_str,
+            "date_to": date_to_str,
+            "today": today,
+            "today_revenue": today_revenue,
+        },
+    )
+
+
+
+2) D:\Project\OnlineSnacksCenter\om_sai_ram\templates
+
+
+
+<!-- base.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Om Sai Ram Snacks Center{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --brand: #eb8c34;
+            --brand-dark: #e46a00;
+            --brand-light: #ffe2c4;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            background-image: url("{% static 'images/bg-image.png' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        .outer-container {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+
+        .bg-overlay {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+            border-radius: 10px;
+        }
+
+        .navbar-brand,
+        .navbar .nav-link,
+        .navbar-text {
+            color: #fff !important;
+        }
+
+        .navbar-brand span.marathi {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .nav-link.active {
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .cart-badge {
+            background: #fff;
+            color: var(--brand-dark);
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: .78rem;
+            margin-left: 6px;
+        }
+
+        /* cart count badge in navbar */
+        .cart-count-badge {
+            background-color: #fff;
+            color: #eb8c34;
+            font-size: 0.9rem;
+            padding: 0.15rem 0.45rem;
+            vertical-align: baseline;
+        }
+
+        .btn-brand {
+            background-color: var(--brand);
+            border-color: var(--brand);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .btn-brand:hover {
+            background-color: var(--brand-dark);
+            border-color: var(--brand-dark);
+            color: #fff;
+        }
+
+        .content-wrapper {
+            margin-top: 1rem;
+        }
+
+        footer {
+            background: linear-gradient(90deg, var(--brand-dark), var(--brand));
+            color: #fff;
+            /* Remove 'text-align: center;' if you want the left-alignment to work strictly */
+            /* text-align: center;  <-- Remove or comment this out */
+            padding: 10px 0;
+            /* You can increase this to 20px 0 for more space */
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <div class="outer-container">
+        <div class="container">
+            <div class="bg-overlay">
+
+                <!-- NAVBAR -->
+                <nav class="navbar navbar-expand-lg mb-4 px-3 fixed-top" aria-label="Main navigation">
+                    <div class="container-fluid p-0">
+                        <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                            <span class="marathi me-2">ॐ साई राम</span>
+                            <span>Snacks Centre</span>
+                        </a>
+
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false"
+                            aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+                        </button>
+
+                        <div class="collapse navbar-collapse" id="mainNavbar">
+                            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                                <!-- Home -->
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                                        href="{% url 'home' %}">Home</a>
+                                </li>
+
+                                {% if request.session.user and request.session.user != 'owner' %}
+                                <!-- Normal user links -->
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+                                        href="{% url 'profile' %}">Profile</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'orders' %}active{% endif %}"
+                                        href="{% url 'orders' %}">My Orders</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'live_orders' %}active{% endif %}"
+                                        href="{% url 'live_orders' %}">Live Status</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+
+                            <!-- Right side -->
+                            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+
+                                {% if request.session.user and request.session.user != 'owner' %}
+                                <!-- Cart -->
+                                <li class="nav-item">
+                                    <a class="nav-link d-flex align-items-center" href="{% url 'cart' %}">
+                                        <i class="bi bi-cart3 me-1"></i>
+                                        <span>Cart</span>
+                                        <span id="cart-count-badge"
+                                            class="badge rounded-pill ms-1 cart-count-badge {% if not cart_count %}d-none{% endif %}">
+                                            {{ cart_count|default:0 }}
+                                        </span>
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a class="btn btn-sm btn-light" href="{% url 'logout' %}">Logout</a>
+                                </li>
+
+                                {% elif request.session.user == 'owner' %}
+                                <!-- Owner logged in (user base rarely used for owner, but safe) -->
+                                <li class="nav-item me-2">
+                                    <span class="navbar-text">Owner</span>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="btn btn-sm btn-light" href="{% url 'logout' %}">Logout</a>
+                                </li>
+
+                                {% else %}
+                                <!-- Guest -->
+                                <li class="nav-item me-2">
+                                    <a class="btn btn-sm btn-light" href="{% url 'login' %}">Login</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="btn btn-sm btn-brand" href="{% url 'register' %}">Register</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- MESSAGES -->
+                {% if messages %}
+                <div class="mb-3">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- PAGE CONTENT -->
+                <div class="content-wrapper">
+                    {% block content %}{% endblock %}
+                </div>
+
+                <!-- FOOTER -->
+                <footer>
+                    <div class="container">
+                        <span>© {% now "Y" %} Om Sai Ram Snacks Centre. All rights reserved.</span>
+                        <span class="mx-2">|</span>
+                        <a href="#" class="text-white text-decoration-none fw-bold" data-bs-toggle="modal"
+                            data-bs-target="#aboutUsModal">
+                            About Us
+                        </a>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast for JS notifications (global generic toast) -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="globalToast" class="toast text-bg-success border-0">
+            <div class="d-flex">
+                <div class="toast-body" id="globalToastBody">Done</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="aboutUsModal" tabindex="-1" aria-labelledby="aboutUsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background: linear-gradient(90deg, #eb8c34, #e46a00);">
+                    <h5 class="modal-title" id="aboutUsModalLabel">
+                        <strong>ॐ साई राम Snacks Centre</strong>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <p class="text-muted small">
+                            Serving authentic, hygienic, and delicious snacks since 2024.
+                        </p>
+                    </div>
+
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Owner Name</span>
+                            <span>Mr. Abhijeet Ovhale</span>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Contact</span>
+                            <!-- <a href="tel:+919876543210" class="text-decoration-none fw-bold" style="color: #e46a00;"> -->
+                            +91 98765 43210
+                            </a>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Email</span>
+                            <!--  <a href="mailto:owner@gmail.com" class="text-decoration-none" style="color: #e46a00;">   -->
+                            owner@gmail.com
+                            </a>
+                        </li>
+
+                        <li class="list-group-item">
+                            <span class="fw-bold text-secondary d-block mb-1">Address</span>
+                            <span class="text-dark">
+                                Canteen No. 3, cafeteria area,<br>
+                                Dr D Y Patil Knowledge City, Charholi (Bk), <br>
+                                Via Lohgaon, near pride world city, <br>
+                                Pune, Maharashtra 412105
+                            </span>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-secondary">Opening Hours</span>
+                            <span class="badge bg-dark">12:00 AM - 7:00 PM</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="modal-footer bg-light justify-content-center">
+                    <small class="text-muted">Thank you for visiting us!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- CSRF helper (standard Django pattern) ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- update badge in navbar ---
+        function updateCartCountDisplay(count) {
+            const badge = document.getElementById('cart-count-badge');
+            if (!badge) return;
+
+            const c = parseInt(count || 0, 10);
+            badge.textContent = c;
+
+            if (c > 0) {
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // avoid double-bind if script somehow included twice
+            if (window.__OSC_ADD_TO_CART_INIT__) return;
+            window.__OSC_ADD_TO_CART_INIT__ = true;
+
+            // Setup optional "Added to cart" toast if present (home page)
+            let addToCartToastInstance = null;
+            let addToCartToastBody = null;
+            const addToCartToastEl = document.getElementById('addToCartToast');
+            if (addToCartToastEl && window.bootstrap && bootstrap.Toast) {
+                addToCartToastInstance = new bootstrap.Toast(addToCartToastEl);
+                addToCartToastBody = document.getElementById('addToCartToastBody');
+            }
+
+            // Delegate clicks on any ".btn-add-to-cart" button
+            document.body.addEventListener('click', function (e) {
+                const btn = e.target.closest('.btn-add-to-cart');
+                if (!btn) return;
+
+                e.preventDefault();
+
+                const snackId = btn.getAttribute('data-snack-id');
+                if (!snackId) return;
+
+                fetch("{% url 'add_to_cart' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie("csrftoken"),
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify({
+                        snack_id: snackId,
+                        quantity: 1
+                    })
+                })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (data.success) {
+                            // ✅ update navbar badge
+                            updateCartCountDisplay(data.cart_count);
+
+                            // ✅ show toast on pages that have home toast markup
+                            if (addToCartToastInstance) {
+                                if (addToCartToastBody) {
+                                    addToCartToastBody.textContent = "Added to cart.";
+                                }
+                                addToCartToastInstance.show();
+                            }
+                        } else if (data.error === "login required") {
+                            window.location.href = "{% url 'login' %}";
+                        } else {
+                            console.error("Add to cart error:", data);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Network error while adding to cart:", err);
+                    });
+            });
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+
+
+
+<!-- home.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --brand: #eb8c34;
+        --brand-dark: #e46a00;
+    }
+
+    .btn-orange {
+        color: white;
+        background-color: #e46a00;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <!-- Page heading -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-end d-none d-md-block">
+            {% if user %}
+            <span class="badge bg-light text-dark small">Welcome, {{ user.user_name }}</span>
+            {% else %}
+            <span class="badge bg-secondary">Guest</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Snack Grid -->
+    <div class="row g-3">
+        {% for snack in snacks %}
+        <div class="col-6 col-md-4 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 snack-card">
+                <div class="ratio ratio-4x3">
+                    {% if snack.image %}
+                    <img src="{% static 'images/' %}{{ snack.image }}" class="card-img-top" alt="{{ snack.snack_name }}"
+                        style="object-fit: cover; border-radius: 12px 12px 0 0;">
+                    {% else %}
+                    <img src="{% static 'images/placeholder.jpg' %}" class="card-img-top" alt="{{ snack.snack_name }}"
+                        style="object-fit: cover; border-radius: 12px 12px 0 0;">
+                    {% endif %}
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h6 class="card-title mb-1">{{ snack.snack_name }}</h6>
+                    <p class="mb-2 text-muted small">
+                        ₹ {{ snack.price|default:"0" }}
+                    </p>
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                        {% if snack.available_quantity is not None and snack.available_quantity <= 0 %} <span
+                            class="badge bg-danger">Out of stock</span>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-orange btn-add-to-cart"
+                                data-snack-id="{{ snack.snack_id }}">
+                                Add to Cart
+                            </button>
+                            {% endif %}
+                            <span class="badge bg-light text-dark small">
+                                {{ snack.available_quantity|default:"0" }} left
+                            </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted py-5">
+            No snacks available. Please ask owner to add some.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Toast for "Added to Cart" (used by base.html JS) -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+    <div id="addToCartToast" class="toast align-items-center text-dark border-0" role="alert" aria-live="assertive"
+        aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="addToCartToastBody">
+                Item added to cart.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{# No extra_scripts block here anymore – all Add to Cart JS lives in base.html #}
+
+
+
+<!-- login.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --brand: #eb8c34;
+        --brand-dark: #e46a00;
+    }
+
+    .auth-page-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .bg-overlay-auth {
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .container {
+        max-width: 1100px;
+    }
+
+    h1 {
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 2.1rem;
+        margin-bottom: 0;
+    }
+
+    h6 {
+        color: var(--brand-dark);
+        margin-bottom: 18px;
+    }
+
+    .left-panel {
+        padding: 28px;
+        border-radius: 12px;
+    }
+
+    label {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .btn-primary {
+        background-color: var(--brand);
+        border-color: var(--brand);
+        font-weight: 600;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--brand-dark);
+        border-color: var(--brand-dark);
+    }
+
+    .carousel-item img {
+        border-radius: 12px;
+        height: 420px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .carousel-caption {
+        position: absolute;
+        left: 12px;
+        bottom: 16px;
+        right: 12px;
+        text-align: left;
+        padding: 8px 12px;
+        background: linear-gradient(90deg, rgba(235, 140, 52, 0.95), rgba(229, 106, 0, 0.95));
+        border-radius: 10px;
+        color: #fff;
+    }
+
+    .carousel-caption .product-name {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .carousel-caption .product-price {
+        font-weight: 600;
+        font-size: 0.95rem;
+        opacity: 0.95;
+    }
+
+    .carousel-indicators {
+        z-index: 5;
+    }
+
+    @media (max-width: 767px) {
+        .carousel-item img {
+            height: 220px;
+        }
+
+        .left-panel {
+            padding: 18px;
+        }
+
+        .carousel-caption {
+            left: 8px;
+            right: 8px;
+            bottom: 10px;
+            font-size: 13px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+    <div class="row align-items-center">
+        <!-- LEFT: login form -->
+        <div class="col-lg-6 col-md-7">
+            <div class="bg-overlay-auth left-panel">
+                <h1>ॐ साई राम</h1>
+                <h6>Online Snacks Centre</h6>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Email or Mobile Number</label>
+                        <input type="text" name="identifier" class="form-control" placeholder="Enter Email or Mobile"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" placeholder="Enter Password"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-brand w-100">Login</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>Don't have an account?
+                        <a href="{% url 'register' %}" style="color:var(--brand); font-weight:600;">Register here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: snack carousel -->
+        <div class="col-lg-6 col-md-5 mt-4 mt-md-0">
+            <div id="snackCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="2500"
+                data-bs-pause="hover">
+                <div class="carousel-inner">
+                    <!-- same 24 slides as Flask -->
+                    <div class="carousel-item active">
+                        <img src="{% static 'images/vada-pav.jpg' %}" alt="Vada Pav">
+                        <div class="carousel-caption">
+                            <div class="product-name">Vada Pav</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/medu-vada.jpg' %}" alt="Medu Vada">
+                        <div class="carousel-caption">
+                            <div class="product-name">Medu Vada</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sabudana-vada.jpg' %}" alt="Sabudana Vada">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sabudana Vada</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sabudana-khichadi.jpg' %}" alt="Sabudana Khichadi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sabudana Khichadi</div>
+                            <div class="product-price">₹40</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/samosa.jpg' %}" alt="Samosa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Samosa</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/pohe.jpg' %}" alt="Pohe">
+                        <div class="carousel-caption">
+                            <div class="product-name">Pohe</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sheera.jpg' %}" alt="Sheera">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sheera</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/misal-pav.jpg' %}" alt="Misal Pav">
+                        <div class="carousel-caption">
+                            <div class="product-name">Misal Pav</div>
+                            <div class="product-price">₹70</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/bhel.jpg' %}" alt="Bhel">
+                        <div class="carousel-caption">
+                            <div class="product-name">Bhel</div>
+                            <div class="product-price">₹50</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/pav-bhaji.jpg' %}" alt="Pav Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Pav Bhaji</div>
+                            <div class="product-price">₹60</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/kanda-bhaji.jpg' %}" alt="Kanda Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Kanda Bhaji</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/alu-vadi.jpg' %}" alt="Alu Vadi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Alu Vadi</div>
+                            <div class="product-price">₹40</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/batata-bhaji.jpg' %}" alt="Batata Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Batata Bhaji</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/panipuri.jpg' %}" alt="Panipuri">
+                        <div class="carousel-caption">
+                            <div class="product-name">Panipuri</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/bharli-vangi.jpg' %}" alt="Bharli Vangi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Bharli Vangi</div>
+                            <div class="product-price">₹70</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/puran-poli.jpg' %}" alt="Puran Poli">
+                        <div class="carousel-caption">
+                            <div class="product-name">Puran Poli</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/shrikhand-puri.jpg' %}" alt="Shrikhand Puri">
+                        <div class="carousel-caption">
+                            <div class="product-name">Shrikhand Puri</div>
+                            <div class="product-price">₹80</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/thalipeeth.jpg' %}" alt="Thalipeeth">
+                        <div class="carousel-caption">
+                            <div class="product-name">Thalipeeth</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/upma.jpg' %}" alt="Upma">
+                        <div class="carousel-caption">
+                            <div class="product-name">Upma</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/dosa.jpg' %}" alt="Dosa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Dosa</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/idli.jpg' %}" alt="Idli">
+                        <div class="carousel-caption">
+                            <div class="product-name">Idli</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/uttapa.jpg' %}" alt="Uttapa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Uttapa</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/chaha.jpg' %}" alt="Chaha">
+                        <div class="carousel-caption">
+                            <div class="product-name">Chaha</div>
+                            <div class="product-price">₹10</div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="{% static 'images/coffee.jpg' %}" alt="Coffee">
+                        <div class="carousel-caption">
+                            <div class="product-name">Coffee</div>
+                            <div class="product-price">₹10</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="carousel-control-prev" type="button" data-bs-target="#snackCarousel"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#snackCarousel"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+        let valid = true;
+        const idf = this.identifier;
+        const pwd = this.password;
+
+        if (!idf.value.trim()) { idf.classList.add('is-invalid'); valid = false; }
+        else idf.classList.remove('is-invalid');
+
+        if (!pwd.value.trim()) { pwd.classList.add('is-invalid'); valid = false; }
+        else pwd.classList.remove('is-invalid');
+
+        if (!valid) e.preventDefault();
+    });
+</script>
+{% endblock %}
+
+
+
+<!-- register.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --brand: #eb8c34;
+        --brand-dark: #e46a00;
+    }
+
+    .auth-page-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .bg-overlay-auth {
+        background: rgba(255, 255, 255, 0.88);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    h1 {
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 2rem;
+        margin-bottom: 0;
+    }
+
+    h3 {
+        color: var(--brand-dark);
+        margin-bottom: 12px;
+    }
+
+    .left-panel {
+        padding: 22px;
+        border-radius: 12px;
+    }
+
+    label {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .btn-warning {
+        background-color: var(--brand);
+        border-color: var(--brand);
+        font-weight: 600;
+    }
+
+    .btn-warning:hover {
+        background-color: var(--brand-dark);
+        border-color: var(--brand-dark);
+    }
+
+    /* Carousel slide image */
+    .carousel-item img {
+        border-radius: 12px;
+        height: 420px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    /* Caption overlay like Flask project */
+    .carousel-caption {
+        position: absolute;
+        left: 12px;
+        bottom: 16px;
+        right: 12px;
+        text-align: left;
+        padding: 8px 12px;
+        background: linear-gradient(90deg, rgba(235, 140, 52, 0.95), rgba(229, 106, 0, 0.95));
+        border-radius: 10px;
+        color: #fff;
+    }
+
+    .carousel-caption .product-name {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .carousel-caption .product-price {
+        font-weight: 600;
+        font-size: 0.95rem;
+        opacity: 0.95;
+    }
+
+    @media (max-width: 767px) {
+        .carousel-item img {
+            height: 220px;
+        }
+
+        .left-panel {
+            padding: 14px;
+        }
+
+        .carousel-caption {
+            font-size: 13px;
+            bottom: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+    <div class="row align-items-center">
+        <!-- LEFT: form -->
+        <div class="col-lg-6 col-md-7">
+            <div class="bg-overlay-auth left-panel">
+                <h1>ॐ साई राम</h1>
+                <h3>Online Snacks Center</h3>
+                <h4 class="text-center mb-3" style="color:var(--brand); font-weight:700;">Register</h4>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label>Full Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Mobile Number</label>
+                        <input type="text" name="mobile" maxlength="10" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Confirm Password</label>
+                        <input type="password" name="confirm_password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 text-white">Register</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>Already have an account?
+                        <a href="{% url 'login' %}" style="color:var(--brand); font-weight:600;">Login here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: carousel (same as Flask register) -->
+        <div class="col-lg-6 col-md-5 mt-4 mt-md-0">
+            <div id="snackCarouselReg" class="carousel slide" data-bs-ride="carousel" data-bs-interval="2500"
+                data-bs-pause="hover">
+                <div class="carousel-inner">
+                    <!-- 1 -->
+                    <div class="carousel-item active">
+                        <img src="{% static 'images/vada-pav.jpg' %}" alt="Vada Pav">
+                        <div class="carousel-caption">
+                            <div class="product-name">Vada Pav</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <!-- 2 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/medu-vada.jpg' %}" alt="Medu Vada">
+                        <div class="carousel-caption">
+                            <div class="product-name">Medu Vada</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 3 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sabudana-vada.jpg' %}" alt="Sabudana Vada">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sabudana Vada</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 4 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sabudana-khichadi.jpg' %}" alt="Sabudana Khichadi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sabudana Khichadi</div>
+                            <div class="product-price">₹40</div>
+                        </div>
+                    </div>
+                    <!-- 5 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/samosa.jpg' %}" alt="Samosa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Samosa</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <!-- 6 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/pohe.jpg' %}" alt="Pohe">
+                        <div class="carousel-caption">
+                            <div class="product-name">Pohe</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <!-- 7 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/sheera.jpg' %}" alt="Sheera">
+                        <div class="carousel-caption">
+                            <div class="product-name">Sheera</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <!-- 8 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/misal-pav.jpg' %}" alt="Misal Pav">
+                        <div class="carousel-caption">
+                            <div class="product-name">Misal Pav</div>
+                            <div class="product-price">₹70</div>
+                        </div>
+                    </div>
+                    <!-- 9 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/bhel.jpg' %}" alt="Bhel">
+                        <div class="carousel-caption">
+                            <div class="product-name">Bhel</div>
+                            <div class="product-price">₹50</div>
+                        </div>
+                    </div>
+                    <!-- 10 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/pav-bhaji.jpg' %}" alt="Pav Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Pav Bhaji</div>
+                            <div class="product-price">₹60</div>
+                        </div>
+                    </div>
+                    <!-- 11 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/kanda-bhaji.jpg' %}" alt="Kanda Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Kanda Bhaji</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 12 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/alu-vadi.jpg' %}" alt="Alu Vadi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Alu Vadi</div>
+                            <div class="product-price">₹40</div>
+                        </div>
+                    </div>
+                    <!-- 13 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/batata-bhaji.jpg' %}" alt="Batata Bhaji">
+                        <div class="carousel-caption">
+                            <div class="product-name">Batata Bhaji</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 14 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/panipuri.jpg' %}" alt="Panipuri">
+                        <div class="carousel-caption">
+                            <div class="product-name">Panipuri</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <!-- 15 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/bharli-vangi.jpg' %}" alt="Bharli Vangi">
+                        <div class="carousel-caption">
+                            <div class="product-name">Bharli Vangi</div>
+                            <div class="product-price">₹70</div>
+                        </div>
+                    </div>
+                    <!-- 16 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/puran-poli.jpg' %}" alt="Puran Poli">
+                        <div class="carousel-caption">
+                            <div class="product-name">Puran Poli</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 17 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/shrikhand-puri.jpg' %}" alt="Shrikhand Puri">
+                        <div class="carousel-caption">
+                            <div class="product-name">Shrikhand Puri</div>
+                            <div class="product-price">₹80</div>
+                        </div>
+                    </div>
+                    <!-- 18 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/thalipeeth.jpg' %}" alt="Thalipeeth">
+                        <div class="carousel-caption">
+                            <div class="product-name">Thalipeeth</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 19 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/upma.jpg' %}" alt="Upma">
+                        <div class="carousel-caption">
+                            <div class="product-name">Upma</div>
+                            <div class="product-price">₹20</div>
+                        </div>
+                    </div>
+                    <!-- 20 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/dosa.jpg' %}" alt="Dosa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Dosa</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 21 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/idli.jpg' %}" alt="Idli">
+                        <div class="carousel-caption">
+                            <div class="product-name">Idli</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 22 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/uttapa.jpg' %}" alt="Uttapa">
+                        <div class="carousel-caption">
+                            <div class="product-name">Uttapa</div>
+                            <div class="product-price">₹30</div>
+                        </div>
+                    </div>
+                    <!-- 23 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/chaha.jpg' %}" alt="Chaha">
+                        <div class="carousel-caption">
+                            <div class="product-name">Chaha</div>
+                            <div class="product-price">₹10</div>
+                        </div>
+                    </div>
+                    <!-- 24 -->
+                    <div class="carousel-item">
+                        <img src="{% static 'images/coffee.jpg' %}" alt="Coffee">
+                        <div class="carousel-caption">
+                            <div class="product-name">Coffee</div>
+                            <div class="product-price">₹10</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- controls -->
+                <button class="carousel-control-prev" type="button" data-bs-target="#snackCarouselReg"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#snackCarouselReg"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('registerForm').addEventListener('submit', function (e) {
+        let valid = true;
+        const form = this;
+        const name = form.name;
+        const email = form.email;
+        const mobile = form.mobile;
+        const password = form.password;
+        const confirm = form.confirm_password;
+
+        const emailRegex = /^[A-Za-z0-9._%+-]+@gmail\.com$/;
+        const mobileRegex = /^\d{10}$/;
+
+        if (!name.value.trim()) { name.classList.add('is-invalid'); valid = false; }
+        else name.classList.remove('is-invalid');
+
+        if (!emailRegex.test(email.value.trim())) { email.classList.add('is-invalid'); valid = false; }
+        else email.classList.remove('is-invalid');
+
+        if (!mobileRegex.test(mobile.value.trim())) { mobile.classList.add('is-invalid'); valid = false; }
+        else mobile.classList.remove('is-invalid');
+
+        if (password.value.length < 3) { password.classList.add('is-invalid'); valid = false; }
+        else password.classList.remove('is-invalid');
+
+        if (confirm.value !== password.value || !confirm.value.trim()) {
+            confirm.classList.add('is-invalid'); valid = false;
+        } else confirm.classList.remove('is-invalid');
+
+        if (!valid) e.preventDefault();
+    });
+</script>
+{% endblock %}
+
+
+
+<!-- profile.html -->
+{% extends "base.html" %}
+
+{% block title %}My Profile - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body">
+                    <h4 class="mb-3">My Profile</h4>
+
+                    {% if user %}
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Name</dt>
+                        <dd class="col-sm-8">{{ user.user_name }}</dd>
+
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">{{ user.email }}</dd>
+
+                        <dt class="col-sm-4">Mobile</dt>
+                        <dd class="col-sm-8">{{ user.mobile }}</dd>
+                    </dl>
+                    {% else %}
+                    <p class="text-muted">No user information found. Please log in again.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                    &larr; Back to Home
+                </a>
+
+                {% if user %}
+                <form method="post" action="{% url 'delete_profile' %}"
+                    onsubmit="return confirm('Are you sure? This will delete your account!');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        Delete Profile
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- cart.html -->
+{% extends "base.html" %}
+
+{% block title %}Cart - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex justify-content-between">
+    <a href="{% url 'home' %}" class="btn btn-link">&larr; Back to Menu</a>
+    <a href="{% url 'profile' %}" class="btn btn-link">Profile</a>
+</div>
+
+<div class="card p-3">
+    <h5>Current Cart</h5>
+
+    {% if items %}
+    <table class="table align-middle mt-2">
+        <thead>
+            <tr>
+                <th>Snack</th>
+                <th>Price</th>
+                <th style="width:180px;">Quantity</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in items %}
+            <tr>
+                <td>{{ it.snack_name }}</td>
+                <td>₹{{ it.price }}</td>
+
+                <td>
+                    <div class="d-flex align-items-center">
+
+                        <!-- Decrease -->
+                        <form method="post" action="{% url 'update_cart_item' %}"
+                            style="display:inline-block; margin-right:6px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="cart_item_id" value="{{ it.id }}">
+                            <input type="hidden" name="action" value="decrease">
+                            <button class="btn btn-light btn-sm" type="submit">−</button>
+                        </form>
+
+                        <span class="mx-2 fw-bold">{{ it.qty }}</span>
+
+                        <!-- Increase -->
+                        <form method="post" action="{% url 'update_cart_item' %}"
+                            style="display:inline-block; margin-left:6px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="cart_item_id" value="{{ it.id }}">
+                            <input type="hidden" name="action" value="increase">
+                            <button class="btn btn-light btn-sm" type="submit">+</button>
+                        </form>
+                    </div>
+                </td>
+
+                <td>₹{{ it.subtotal }}</td>
+
+                <!-- Remove -->
+                <td>
+                    <form method="post" action="{% url 'update_cart_item' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="cart_item_id" value="{{ it.id }}">
+                        <input type="hidden" name="action" value="remove">
+                        <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div><strong>Total:</strong> ₹{{ total }}</div>
+
+        <form method="post" action="{% url 'checkout' %}">
+            {% csrf_token %}
+            <button class="btn btn-brand" type="submit">Place Order</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="mt-3">Your cart is empty.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+<!-- checkout.html -->
+{% extends "base.html" %}
+
+{% block title %}Checkout - Om Sai Ram Snacks Center{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="mb-0">Checkout</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="mb-3">Order Summary</h5>
+                <ul class="list-group list-group-flush">
+                    {% for item in items %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ item.snack_name }}</strong>
+                            <span class="text-muted small"> × {{ item.qty }}</span>
+                        </div>
+                        <div>
+                            <span class="text-muted small me-2">₹ {{ item.price }} each</span>
+                            <strong>₹ {{ item.subtotal }}</strong>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Total</h5>
+                <p class="fs-4 mb-4">₹ {{ total }}</p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'payment' 'cash' %}" class="btn btn-brand">Pay in Cash</a>
+                    <a href="{% url 'payment' 'cashless' %}" class="btn btn-brand">Pay Cashless</a>
+                    <a href="{% url 'cart' %}" class="btn btn-link text-decoration-none">Back to Cart</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- payment.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Payment - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h3 class="mb-1">
+                Payment -
+                {% if method == "cashless" %}
+                Cashless
+                {% else %}
+                Cash
+                {% endif %}
+            </h3>
+            <p class="text-muted small mb-0">
+                Please review your order and complete the payment.
+            </p>
+        </div>
+    </div>
+
+    <!-- Order summary -->
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <h5 class="mb-3">Order Summary</h5>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Snack</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Price (₹)</th>
+                            <th class="text-end">Subtotal (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.snack_name }}</td>
+                            <td class="text-center">{{ item.qty }}</td>
+                            <td class="text-end">{{ item.price }}</td>
+                            <td class="text-end">{{ item.subtotal }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="table-light">
+                            <th colspan="3" class="text-end">Total</th>
+                            <th class="text-end">₹{{ total }}</th>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment instructions / QR -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    {% if method == "cashless" %}
+                    <div>
+                        <h5 class="mb-2">Cashless Payment</h5>
+                        <p class="text-muted small">
+                            1. Scan the QR code using any UPI app (PhonePe, GPay, Paytm, etc.).<br>
+                            2. Complete the payment of <strong>₹{{ total }}</strong>.<br>
+                            3. After successful payment, tap <strong>“Payment Done”</strong> below.
+                        </p>
+                    </div>
+                    {% else %}
+                    <div>
+                        <h5 class="mb-2">Cash Payment</h5>
+                        <p class="text-muted small">
+                            Please pay <strong>₹{{ total }}</strong> in cash at the counter.
+                            After handing over the cash, tap <strong>“Payment Done”</strong> below.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="method" value="{{ method }}">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" name="action" value="done" class="btn btn-brand">
+                                Payment Done
+                            </button>
+                            <button type="submit" name="action" value="cancel" class="btn btn-outline-secondary">
+                                Cancel &amp; Change Method
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% if method == "cashless" %}
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h6 class="mb-3">Scan to Pay (Cashless)</h6>
+                    <div
+                        style="max-width: 260px; width: 100%; border: 1px solid #eee; padding: 8px; border-radius: 12px;">
+                        <img src="{% static 'images/payment-qr-code.jpg' %}" alt="Payment QR Code"
+                            class="img-fluid d-block mx-auto" style="border-radius: 8px;">
+                    </div>
+                    <p class="text-muted small mt-2 mb-0 text-center">
+                        Use any UPI app to scan this QR code and complete the payment.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+
+
+<!-- feedback.html -->
+{% extends "base.html" %}
+
+{% block title %}Feedback - Om Sai Ram Snacks Center{% endblock %}
+
+{% block extra_head %}
+<style>
+    .star-rating {
+        display: flex;
+        flex-direction: row;
+        /* left to right */
+        gap: 0.25rem;
+        font-size: 1.8rem;
+        cursor: pointer;
+    }
+
+    .star-rating .star {
+        color: #ddd;
+        transition: color 0.15s ease;
+    }
+
+    .star-rating .star.filled {
+        color: #ffc107;
+    }
+
+    .char-counter {
+        font-size: 0.85rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-3">Share Your Feedback</h1>
+                <p class="text-muted small mb-4">
+                    Your feedback helps us improve snacks and service.
+                </p>
+
+                <form id="feedbackForm" method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="method" value="{{ method }}">
+                    <input type="hidden" id="ratingInput" name="rating" value="0">
+
+                    <div class="mb-3">
+                        <label class="form-label d-block">Rating</label>
+                        <div class="star-rating" id="starRating">
+                            <span class="star" data-value="1">&#9733;</span>
+                            <span class="star" data-value="2">&#9733;</span>
+                            <span class="star" data-value="3">&#9733;</span>
+                            <span class="star" data-value="4">&#9733;</span>
+                            <span class="star" data-value="5">&#9733;</span>
+                        </div>
+                        <div class="invalid-feedback d-block" id="ratingError" style="display:none;">
+                            Please select a rating.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feedback_content" class="form-label">Comments (optional)</label>
+                        <textarea class="form-control" id="feedback_content" name="feedback_content" rows="4"
+                            maxlength="350"></textarea>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Max 350 characters.</small>
+                            <small class="char-counter" id="charCounter">0 / 350</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" name="action" value="skip" class="btn btn-outline-secondary">Skip</button>
+                        <button type="submit" name="action" value="submit" class="btn btn-brand">Submit
+                            Feedback</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Star rating left to right
+    (function () {
+        const stars = document.querySelectorAll('#starRating .star');
+        const ratingInput = document.getElementById('ratingInput');
+        const ratingError = document.getElementById('ratingError');
+
+        function setRating(val) {
+            ratingInput.value = val;
+            stars.forEach(star => {
+                const value = parseInt(star.getAttribute('data-value'));
+                if (value <= val) {
+                    star.classList.add('filled');
+                } else {
+                    star.classList.remove('filled');
+                }
+            });
+            ratingError.style.display = 'none';
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('click', function () {
+                const val = parseInt(this.getAttribute('data-value'));
+                setRating(val);
+            });
+        });
+
+        document.getElementById('feedbackForm').addEventListener('submit', function (e) {
+            const action = document.activeElement ? document.activeElement.value : null;
+            if (action === 'skip') return; // allow skip
+            if (parseInt(ratingInput.value) < 1) {
+                e.preventDefault();
+                ratingError.style.display = 'block';
+            }
+        });
+    })();
+
+    // Character counter for feedback textarea
+    (function () {
+        const textarea = document.getElementById('feedback_content');
+        const counter = document.getElementById('charCounter');
+        if (!textarea || !counter) return;
+
+        function updateCount() {
+            const len = textarea.value.length;
+            counter.textContent = `${len} / 350`;
+        }
+
+        textarea.addEventListener('input', updateCount);
+        updateCount();
+    })();
+</script>
+{% endblock %}
+
+
+
+<!-- orders.html -->
+{% extends "base.html" %}
+
+{% block title %}My Orders - Om Sai Ram Snacks Center{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1 class="mb-0">My Orders</h1>
+    <a href="{% url 'live_orders' %}" class="btn btn-outline-secondary btn-sm">
+        Live Status
+    </a>
+</div>
+
+{% if orders %}
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Order ID</th>
+                <th>Date &amp; Time</th>
+                <th>Price (₹)</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order.order_id }}</td>
+                <td>{{ order.order_time|date:"d M Y, h:i A" }}</td>
+                <td>₹ {{ order.price|default:"0" }}</td>
+                <td>
+                    <span class="badge
+                            {% if order.status == 'Pending' %}bg-warning
+                            {% elif order.status == 'Paid' %}bg-info
+                            {% elif order.status == 'Preparing' %}bg-primary
+                            {% elif order.status == 'Ready' %}bg-success
+                            {% elif order.status == 'Completed' %}bg-success
+                            {% elif order.status == 'Cancelled' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                        {{ order.status }}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'view_order' order.order_id %}" class="btn btn-sm btn-outline-secondary">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    You have no orders yet. <a href="{% url 'home' %}">Order your first snack</a>.
+</div>
+{% endif %}
+{% endblock %}
+
+
+
+<!-- view_order.html -->
+{% extends "base.html" %}
+
+{% block title %}Order Details - Om Sai Ram Snacks Center{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Order #{{ order.order_id }}</h4>
+
+        <p>
+            <strong>User:</strong> {{ order.user.user_name }} (ID: {{ order.user.user_id }})<br>
+            <strong>Status:</strong> {{ order.status }}<br>
+            <strong>Total Price:</strong> ₹{{ order.price }}<br>
+            <strong>Order Time:</strong> {{ order.order_time }}
+        </p>
+
+        <h5 class="mt-4">Items</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Snack</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.snack.snack_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center text-muted">No items (data missing).</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <a href="{% url 'orders' %}" class="btn btn-secondary mt-2">
+            Back to orders
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- live_orders.html -->
+{% extends "base.html" %}
+
+{% block title %}Live Order Status - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+
+<style>
+    .live-orders-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .status-chip {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        background-color: #f8f9fa;
+        color: #212529;
+        white-space: nowrap;
+    }
+
+    .status-chip-success {
+        border-color: #198754;
+    }
+
+    .status-chip-warn {
+        border-color: #fd7e14;
+    }
+
+    .status-chip-info {
+        border-color: #0d6efd;
+    }
+
+    .status-chip-muted {
+        border-style: dashed;
+    }
+</style>
+
+<div class="live-orders-container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-1">Live Order Status</h3>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Order ID</th>
+                            <th>Status</th>
+                            <th>Amount (₹)</th>
+                            <th>Order Time</th>
+                            <th>Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="live-orders-body">
+                        {# Initial server-side render as fallback (will be overwritten by JS) #}
+                        {% for order in orders %}
+                        {% with payment=order.payments.last %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ order.order_id }}</td>
+                            <td>
+                                <span class="status-chip">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td>{{ order.price|default:"0" }}</td>
+                            <td>{{ order.order_time|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if payment %}
+                                <span class="status-chip">
+                                    {{ payment.status }}
+                                </span>
+                                {% else %}
+                                <span class="status-chip status-chip-muted">
+                                    No payment
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                You have no recent orders.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tbody = document.getElementById('live-orders-body');
+        if (!tbody) return;
+
+        function formatDateTime(isoString) {
+            try {
+                const d = new Date(isoString);
+                if (isNaN(d.getTime())) return isoString;
+                // Simple readable format
+                return d.toLocaleString('en-IN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+            } catch (e) {
+                return isoString;
+            }
+        }
+
+        function buildStatusChip(status) {
+            // Always dark text; just vary border slightly
+            let extraClass = '';
+            const s = (status || '').toString();
+
+            if (s === 'Completed' || s === 'Ready') {
+                extraClass = ' status-chip-success';
+            } else if (s === 'Preparing' || s === 'Paid') {
+                extraClass = ' status-chip-info';
+            } else if (s === 'Pending') {
+                extraClass = ' status-chip-warn';
+            } else if (!s) {
+                extraClass = ' status-chip-muted';
+            }
+
+            const label = s || '—';
+            return `<span class="status-chip${extraClass}">${label}</span>`;
+        }
+
+        async function fetchLatestOrders() {
+            try {
+                const resp = await fetch("{% url 'api_user_latest_orders' %}");
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data.orders) return;
+
+                tbody.innerHTML = '';  // clear body
+
+                if (data.orders.length === 0) {
+                    tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            You have no recent orders.
+                        </td>
+                    </tr>`;
+                    return;
+                }
+
+                data.orders.forEach((o, idx) => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td>${o.order_id}</td>
+                    <td>${buildStatusChip(o.status)}</td>
+                    <td>${o.price ?? 0}</td>
+                    <td>${formatDateTime(o.order_time)}</td>
+                    <td>${buildStatusChip(o.payment_status)}</td>
+                `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                console.error('Error loading live orders:', err);
+            }
+        }
+
+        // Initial load
+        fetchLatestOrders();
+
+        // Auto refresh every 3 seconds
+        setInterval(fetchLatestOrders, 3000);
+    });
+</script>
+{% endblock %}
+
+
+
+3) D:\Project\OnlineSnacksCenter\om_sai_ram\templates\owner
+
+
+
+<!-- base.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Owner Panel - Om Sai Ram Snacks Centre{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand: #eb8c34;
+            --brand-dark: #e46a00;
+        }
+
+        body {
+
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            font-family: "Poppins", sans-serif;
+        }
+
+        .nav-wrapper {
+            background: rgba(255, 255, 255, 0.90);
+            padding: 15px;
+            border-radius: 14px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+            border-radius: 12px;
+        }
+
+        .navbar-brand,
+        .nav-link,
+        .navbar-text {
+            color: #fff !important;
+            font-weight: 600;
+        }
+
+        .nav-link.active {
+            text-decoration: underline;
+        }
+
+        .btn-orange {
+            color: #fff;
+            background-color: #eb8c34;
+        }
+
+        footer {
+            background: linear-gradient(90deg, var(--brand-dark), var(--brand));
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border-radius: 12px;
+            margin-top: 25px;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <div class="container py-3">
+
+        <div class="nav-wrapper mb-4">
+            <nav class="navbar navbar-expand-lg px-3 fixed-top">
+
+                <!-- BRAND ALWAYS RETURNS TO OWNER DASHBOARD -->
+                <a class="navbar-brand" href="{% url 'owner_dashboard' %}">
+                    <span class="marathi me-2" style="font-weight: 900;">ॐ साई राम</span> Snacks Centre (Owner)
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#ownerNav">
+                    <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="ownerNav">
+
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                        <!-- DASHBOARD -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_dashboard' %}active{% endif %}"
+                                href="{% url 'owner_dashboard' %}">
+                                Dashboard
+                            </a>
+                        </li>
+
+                        <!-- INVENTORY -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_inventory' %}active{% endif %}"
+                                href="{% url 'owner_inventory' %}">
+                                Inventory
+                            </a>
+                        </li>
+
+                        <!-- ORDERS -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_orders_list' %}active{% endif %}"
+                                href="{% url 'owner_orders_list' %}">
+                                Orders
+                            </a>
+                        </li>
+
+                        <!-- PAYMENTS -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_payments_list' %}active{% endif %}"
+                                href="{% url 'owner_payments_list' %}">
+                                Payments
+                            </a>
+                        </li>
+
+                        <!-- CUSTOMERS -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_customers' %}active{% endif %}"
+                                href="{% url 'owner_customers' %}">
+                                Customers
+                            </a>
+                        </li>
+
+                        <!-- FEEDBACK -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_feedbacks_list' %}active{% endif %}"
+                                href="{% url 'owner_feedbacks_list' %}">
+                                Feedback
+                            </a>
+                        </li>
+
+                        <!-- REPORTS -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'owner_reports' %}active{% endif %}"
+                                href="{% url 'owner_reports' %}">
+                                Reports
+                            </a>
+                        </li>
+
+                    </ul>
+
+                    <!-- Right Side -->
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a href="{% url 'logout' %}" class="btn btn-light btn-sm">Logout</a>
+                        </li>
+                    </ul>
+
+                </div>
+            </nav>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+
+        <footer>
+            © {% now "Y" %} Om Sai Ram Snacks Centre — Owner Panel
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>
+
+
+
+<!-- dashboard.html -->
+{% extends "owner/base.html" %}
+
+{% block title %}Owner Dashboard - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <a href="{% url 'owner_customers' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Users :</h6>
+                    <div class="h4 fw-bold">{{ total_users|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'owner_reports_orders' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Orders (today) :</h6>
+                    <div class="h4 fw-bold">{{ total_orders|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'owner_reports_payments' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Payments (today) :</h6>
+                    <div class="h4 fw-bold">{{ total_payments|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'owner_inventory' %}" class="text-decoration-none text-dark">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Snacks :</h6>
+                    <div class="h4 fw-bold">{{ total_snacks|default:"0" }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Recent Orders</h4>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Price (₹)</th>
+                        <th>Time</th>
+                        <th>View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>#{{ order.order_id }}</td>
+                        <td>{{ order.user.user_name }}</td>
+                        <td>{{ order.status }}</td>
+                        <td>{{ order.price }}</td>
+                        <td>{{ order.order_time }}</td>
+                        <td>
+                            <a href="{% url 'owner_view_order' order.order_id %}"
+                                class="btn btn-sm btn-outline-secondary">
+                                Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            No recent orders.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- customers.html -->
+{% extends "owner/base.html" %}
+
+{% block title %}Customers - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Customers</h3>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Name</label>
+                <input type="text" name="q_name" value="{{ q_name }}" class="form-control form-control-sm"
+                    placeholder="Search by name">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Email</label>
+                <input type="text" name="q_email" value="{{ q_email }}" class="form-control form-control-sm"
+                    placeholder="Search by email">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Mobile</label>
+                <input type="text" name="q_mobile" value="{{ q_mobile }}" class="form-control form-control-sm"
+                    placeholder="Search by mobile">
+            </div>
+            <div class="col-12 text-end mt-2">
+                <button type="submit" class="btn btn-sm btn-orange">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Read-only table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ u.user_id }}</td>
+                            <td>{{ u.user_name }}</td>
+                            <td>{{ u.email }}</td>
+                            <td>{{ u.mobile }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No customers found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+
+
+<!-- feedbacks.html -->
+{% extends "owner/base.html" %}
+
+{% block title %}Feedback - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Customer Feedback</h4>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Rating</th>
+                        <th>Feedback</th>
+                        <th>Time</th>
+                        <th style="width:110px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fb in feedbacks %}
+                    <tr>
+                        <td>{{ fb.feedback_id }}</td>
+                        <td>{{ fb.user.user_name }}</td>
+                        <td>
+                            {% if fb.rating %}{{ fb.rating }}/5{% else %}-{% endif %}
+                        </td>
+                        <td style="max-width:320px;">{{ fb.feedback_content }}</td>
+                        <td>{{ fb.feedback_time }}</td>
+                        <td>
+                            <form method="post" action="{% url 'owner_delete_feedback' fb.feedback_id %}"
+                                onsubmit="return confirm('Delete this feedback?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No feedback yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- orders.html -->
+{% extends "base.html" %}
+
+{% block title %}My Orders - Om Sai Ram Snacks Center{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1 class="mb-0">My Orders</h1>
+    <a href="{% url 'live_orders' %}" class="btn btn-outline-secondary btn-sm">
+        Live Status
+    </a>
+</div>
+
+{% if orders %}
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Order ID</th>
+                <th>Date &amp; Time</th>
+                <th>Price (₹)</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order.order_id }}</td>
+                <td>{{ order.order_time|date:"d M Y, h:i A" }}</td>
+                <td>₹ {{ order.price|default:"0" }}</td>
+                <td>
+                    <span class="badge
+                            {% if order.status == 'Pending' %}bg-warning
+                            {% elif order.status == 'Paid' %}bg-info
+                            {% elif order.status == 'Preparing' %}bg-primary
+                            {% elif order.status == 'Ready' %}bg-success
+                            {% elif order.status == 'Completed' %}bg-success
+                            {% elif order.status == 'Cancelled' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                        {{ order.status }}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'view_order' order.order_id %}" class="btn btn-sm btn-outline-secondary">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    You have no orders yet. <a href="{% url 'home' %}">Order your first snack</a>.
+</div>
+{% endif %}
+{% endblock %}
+
+
+
+<!-- order_view -->
+{% extends "owner/base.html" %}
+
+{% block title %}Order Details - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Order #{{ order.order_id }}</h4>
+
+        <p>
+            <strong>User:</strong> {{ order.user.user_name }} (ID: {{ order.user.user_id }})<br>
+            <strong>Status:</strong> {{ order.status }}<br>
+            <strong>Total Price:</strong> ₹{{ order.price }}<br>
+            <strong>Order Time:</strong> {{ order.order_time }}
+        </p>
+
+        <h5 class="mt-4">Items</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Snack</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.snack.snack_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center text-muted">No items (data missing).</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <a href="{% url 'owner_orders_list' %}" class="btn btn-secondary mt-2">
+            Back to orders
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- payments.html -->
+{% extends "owner/base.html" %}
+{% load static %}
+
+{% block title %}Payments - Owner{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-0">Payments (Today)</h3>
+            <p class="text-muted mb-0 small">
+                Showing payments for: {{ today|date:"Y-m-d" }}
+            </p>
+        </div>
+    </div>
+
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Order ID</label>
+                <input type="text" name="q_order" value="{{ q_order }}" class="form-control form-control-sm"
+                    placeholder="Order ID">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Mode</label>
+                <input type="text" name="q_mode" value="{{ q_mode }}" class="form-control form-control-sm"
+                    placeholder="Cash / Cashless">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select name="q_status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Pending" {% if q_status == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Completed" {% if q_status == "Completed" %}selected{% endif %}>Completed</option>
+                    <option value="Failed" {% if q_status == "Failed" %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-md-end">
+                <button type="submit" class="btn btn-sm btn-orange mt-3 mt-md-0">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Payment ID</th>
+                            <th>Order ID</th>
+                            <th>Mode</th>
+                            <th>Price (₹)</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payments %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ p.payment_id }}</td>
+                            <td>{{ p.order.order_id }}</td>
+                            <td>{{ p.mode|default:"-" }}</td>
+                            <td>{{ p.order.price|default:"0" }}</td>
+                            <td>
+                                <form method="post" action="{% url 'owner_change_payment_status' p.payment_id %}"
+                                    class="d-flex gap-1 align-items-center">
+                                    {% csrf_token %}
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="Pending" {% if p.status == "Pending" %}selected{% endif %}>
+                                            Pending
+                                        </option>
+                                        <option value="Completed" {% if p.status == "Completed" %}selected{% endif %}>
+                                            Completed
+                                        </option>
+                                        <option value="Failed" {% if p.status == "Failed" %}selected{% endif %}>
+                                            Failed
+                                        </option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        Save
+                                    </button>
+                                </form>
+                            </td>
+                            <td>{{ p.payment_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No payments for today.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- inventory.html -->
+{% extends "owner/base.html" %}
+{% load static %}
+
+{% block title %}Inventory - Owner{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Snack Inventory</h3>
+        <a href="{% url 'owner_add_snack' %}" class="btn btn-orange btn-sm">
+            + Add Snack
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Snack Name</th>
+                            <th>Price (₹)</th>
+                            <th>Available Qty</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for snack in snacks %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ snack.snack_name }}</td>
+                            <td>{{ snack.price|default:"0" }}</td>
+                            <td>{{ snack.available_quantity|default:"0" }}</td>
+                            <td class="text-end">
+                                <!-- Edit inline -->
+                                <form method="post" action="{% url 'owner_update_inventory' snack.snack_id %}"
+                                    class="d-inline-flex gap-1 align-items-center">
+                                    {% csrf_token %}
+                                    <input type="text" name="snack_name" value="{{ snack.snack_name }}"
+                                        class="form-control form-control-sm" style="max-width: 140px;">
+
+                                    <input type="number" name="price" value="{{ snack.price|default:'0' }}" min="0"
+                                        class="form-control form-control-sm" style="max-width: 100px;">
+
+                                    <input type="number" name="available_quantity"
+                                        value="{{ snack.available_quantity|default:'0' }}" min="0"
+                                        class="form-control form-control-sm" style="max-width: 100px;">
+
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        Save
+                                    </button>
+                                </form>
+
+                                <!-- Delete -->
+                                <form method="post" action="{% url 'owner_delete_snack' snack.snack_id %}"
+                                    class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger ms-1"
+                                        onclick="return confirm('Delete this snack?');">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No snacks in inventory. Add some using the button above.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- add_snack.html -->
+{% extends "owner/base.html" %}
+
+{% block title %}Add Snack - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="mb-3">Add New Snack</h4>
+
+        <form method="post" enctype="multipart/form-data" id="addSnackForm">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Snack Name</label>
+                    <input type="text" name="snack_name" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Price (₹)</label>
+                    <input type="number" name="price" class="form-control" min="0" step="1" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Available Quantity</label>
+                    <input type="number" name="available_quantity" class="form-control" min="0" step="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Image</label>
+                    <input type="file" name="image" class="form-control" accept=".jpg,.jpeg,.png">
+                </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-between">
+                <a href="{% url 'owner_inventory' %}" class="btn btn-secondary">Back to inventory</a>
+                <button type="submit" class="btn btn-orange">Save Snack</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('addSnackForm')?.addEventListener('submit', function (e) {
+        const price = Number(this.price.value || 0);
+        const qty = Number(this.available_quantity.value || 0);
+        if (price < 0 || qty < 0) {
+            alert("Price and quantity must be non-negative.");
+            e.preventDefault();
+        }
+    });
+</script>
+{% endblock %}
+
+
+
+<!-- reports.html -->
+{% extends "owner/base.html" %} {% block title %}Reports - Owner - Om Sai Ram
+Snacks Centre{% endblock %} {% block content %}
+
+<style>
+  .chart-wrapper {
+    width: 100%;
+    max-width: 650px;
+    height: 260px;
+    margin: auto;
+    padding: 8px;
+  }
+</style>
+
+<div class="container py-4">
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <a
+        href="{% url 'owner_reports_payments' %}"
+        class="text-decoration-none text-dark"
+      >
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h6 class="text-muted mb-1">Total Revenue (Today) :</h6>
+            <div class="h4 fw-bold">₹{{ today_revenue|default:"0" }}</div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6">
+      <a
+        href="{% url 'owner_reports_orders' %}"
+        class="text-decoration-none text-dark"
+      >
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h6 class="text-muted mb-1">Total Orders (Today) :</h6>
+            <div class="h4 fw-bold">{{ today_orders|default:"0" }}</div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <div
+        class="d-flex flex-wrap justify-content-between align-items-center mb-3"
+      >
+        <div>
+          <h5 class="mb-1">Revenue Graph</h5>
+          <p class="text-muted small mb-0">
+            Completed payments between selected dates.
+          </p>
+        </div>
+
+        <form method="get" class="row g-2 align-items-end mt-2 mt-md-0">
+          <div class="col-auto">
+            <label class="form-label small mb-1">From</label>
+            <input
+              type="date"
+              name="from"
+              value="{{ date_from }}"
+              class="form-control form-control-sm"
+            />
+          </div>
+          <div class="col-auto">
+            <label class="form-label small mb-1">To</label>
+            <input
+              type="date"
+              name="to"
+              value="{{ date_to }}"
+              class="form-control form-control-sm"
+            />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-orange mt-3 mt-md-0">
+              Apply
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="chart-wrapper">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <h5 class="mb-3">Top 10 Popular Snacks</h5>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Snack</th>
+              <th>Total Sold</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for snack in popular %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ snack.snack_name }}</td>
+              <td>{{ snack.total_sold|default:"0" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">
+                No sales records yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted small mt-2 mb-0">
+        Based on total quantity sold from all orders.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const canvas = document.getElementById('revenueChart');
+      if (!canvas) return;
+
+      // Fixed size graph
+      canvas.width = 650;
+      canvas.height = 260;
+
+      const labels = [
+          {% for d in chart_labels %}
+              '{{ d }}'{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+      ];
+
+      const values = [
+          {% for v in chart_values %}
+              {{ v }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+      ];
+
+      new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+              labels: labels,
+              datasets: [{
+                  label: 'Revenue (₹)',
+                  data: values,
+                  borderWidth: 2,
+                  tension: 0.3
+              }]
+          },
+          options: {
+              responsive: false, // fixed size
+              maintainAspectRatio: false,
+              scales: {
+                  y: {
+                      beginAtZero: true,
+                      ticks: {
+                          precision: 0
+                      }
+                  }
+              }
+          }
+      });
+  });
+</script>
+{% endblock %}
+
+
+
+<!-- reports_orders.html -->
+{% extends "owner/base.html" %}
+{% load static %}
+
+{% block title %}Orders Report - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-1">Orders Report (All Time)</h3>
+            <p class="text-muted small mb-0">
+                Today complete orders: {{ today_completed }}
+            </p>
+        </div>
+        <a href="{% url 'owner_reports' %}" class="btn btn-sm btn-outline-secondary">
+            ← Back to Reports
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">From date</label>
+                <input type="date" name="from" value="{{ date_from }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">To date</label>
+                <input type="date" name="to" value="{{ date_to }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Pending" {% if status_filter == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Paid" {% if status_filter == "Paid" %}selected{% endif %}>Paid</option>
+                    <option value="Preparing" {% if status_filter == "Preparing" %}selected{% endif %}>Preparing</option>
+                    <option value="Ready" {% if status_filter == "Ready" %}selected{% endif %}>Ready</option>
+                    <option value="Completed" {% if status_filter == "Completed" %}selected{% endif %}>Completed</option>
+                    <option value="Cancelled" {% if status_filter == "Cancelled" %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-md-end">
+                <button type="submit" class="btn btn-sm btn-orange mt-3 mt-md-0">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Order ID</th>
+                            <th>User</th>
+                            <th>Status</th>
+                            <th>Price (₹)</th>
+                            <th>Order Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in page_obj %}
+                        <tr>
+                            <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                            <td>{{ order.order_id }}</td>
+                            <td>
+                                {{ order.user.user_name }}<br>
+                                <small class="text-muted">{{ order.user.email }}</small>
+                            </td>
+                            <td>{{ order.status }}</td>
+                            <td>{{ order.price|default:"0" }}</td>
+                            <td>{{ order.order_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No orders found for selected filters.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %} <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ num }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
+                            {{ num }}
+                        </a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.next_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
+                                Next
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+<!-- reports_payments.html -->
+{% extends "owner/base.html" %}
+{% load static %}
+
+{% block title %}Payments Report - Owner - Om Sai Ram Snacks Centre{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-1">Payments Report (All Time)</h3>
+            <p class="text-muted small mb-0">
+                Today complete revenue: ₹{{ today_revenue|default:"0" }}
+            </p>
+        </div>
+        <a href="{% url 'owner_reports' %}" class="btn btn-sm btn-outline-secondary">
+            ← Back to Reports
+        </a>
+    </div>
+
+    <form method="get" class="card mb-3 shadow-sm border-0">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">From date</label>
+                <input type="date" name="from" value="{{ date_from }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">To date</label>
+                <input type="date" name="to" value="{{ date_to }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Pending" {% if status_filter == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Completed" {% if status_filter == "Completed" %}selected{% endif %}>Completed</option>
+                    <option value="Failed" {% if status_filter == "Failed" %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Mode</label>
+                <input type="text" name="mode" value="{{ mode_filter }}" class="form-control form-control-sm"
+                    placeholder="Cash / Cashless">
+            </div>
+            <div class="col-md-12 text-md-end mt-2">
+                <button type="submit" class="btn btn-sm btn-orange">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Payment ID</th>
+                            <th>Order ID</th>
+                            <th>Mode</th>
+                            <th>Price (₹)</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in page_obj %}
+                        <tr>
+                            <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                            <td>{{ p.payment_id }}</td>
+                            <td>{{ p.order.order_id }}</td>
+                            <td>{{ p.mode|default:"-" }}</td>
+                            <td>{{ p.order.price|default:"0" }}</td>
+                            <td>{{ p.status }}</td>
+                            <td>{{ p.payment_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No payments found for selected filters.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}&mode={{ mode_filter }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num == page_obj.number %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ num }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}&mode={{ mode_filter }}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.next_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}&mode={{ mode_filter }}">
+                            Next
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

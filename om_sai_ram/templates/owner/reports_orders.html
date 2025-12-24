@@ -22,22 +22,20 @@
         <div class="card-body row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small mb-1">From date</label>
-                <input type="date" name="from" value="{{ date_from }}"
-                       class="form-control form-control-sm">
+                <input type="date" name="from" value="{{ date_from }}" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-1">To date</label>
-                <input type="date" name="to" value="{{ date_to }}"
-                       class="form-control form-control-sm">
+                <input type="date" name="to" value="{{ date_to }}" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
                 <label class="form-label small mb-1">Status</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="">All</option>
-                    <option value="Pending"   {% if status_filter == "Pending" %}selected{% endif %}>Pending</option>
-                    <option value="Paid"      {% if status_filter == "Paid" %}selected{% endif %}>Paid</option>
+                    <option value="Pending" {% if status_filter == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Paid" {% if status_filter == "Paid" %}selected{% endif %}>Paid</option>
                     <option value="Preparing" {% if status_filter == "Preparing" %}selected{% endif %}>Preparing</option>
-                    <option value="Ready"     {% if status_filter == "Ready" %}selected{% endif %}>Ready</option>
+                    <option value="Ready" {% if status_filter == "Ready" %}selected{% endif %}>Ready</option>
                     <option value="Completed" {% if status_filter == "Completed" %}selected{% endif %}>Completed</option>
                     <option value="Cancelled" {% if status_filter == "Cancelled" %}selected{% endif %}>Cancelled</option>
                 </select>
@@ -96,7 +94,7 @@
                     {% if page_obj.has_previous %}
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.previous_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
+                            href="?page={{ page_obj.previous_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
                             Previous
                         </a>
                     </li>
@@ -105,28 +103,27 @@
                     {% endif %}
 
                     {% for num in page_obj.paginator.page_range %}
-                        {% if num == page_obj.number %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-                            <li class="page-item">
-                                <a class="page-link"
-                                   href="?page={{ num }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
-                                    {{ num }}
-                                </a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
+                    {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %} <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.next_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
-                            Next
+                            href="?page={{ num }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
+                            {{ num }}
                         </a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled"><span class="page-link">Next</span></li>
-                    {% endif %}
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.next_page_number }}&from={{ date_from }}&to={{ date_to }}&status={{ status_filter }}">
+                                Next
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        {% endif %}
                 </ul>
             </nav>
             {% endif %}

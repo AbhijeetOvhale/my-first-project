@@ -5,21 +5,26 @@
 
 {% block extra_head %}
 <style>
-    :root{
+    :root {
         --brand: #eb8c34;
         --brand-dark: #e46a00;
     }
+
     .auth-page-container {
         max-width: 1100px;
         margin: 0 auto;
     }
+
     .bg-overlay-auth {
-        background: rgba(255,255,255,0.85);
+        background: rgba(255, 255, 255, 0.85);
         border-radius: 16px;
         padding: 20px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     }
-    .container { max-width: 1100px; }
+
+    .container {
+        max-width: 1100px;
+    }
 
     h1 {
         color: var(--brand);
@@ -27,6 +32,7 @@
         font-size: 2.1rem;
         margin-bottom: 0;
     }
+
     h6 {
         color: var(--brand-dark);
         margin-bottom: 18px;
@@ -37,13 +43,17 @@
         border-radius: 12px;
     }
 
-    label { font-weight: 600; color: #333; }
+    label {
+        font-weight: 600;
+        color: #333;
+    }
 
     .btn-primary {
         background-color: var(--brand);
         border-color: var(--brand);
         font-weight: 600;
     }
+
     .btn-primary:hover {
         background-color: var(--brand-dark);
         border-color: var(--brand-dark);
@@ -63,25 +73,41 @@
         right: 12px;
         text-align: left;
         padding: 8px 12px;
-        background: linear-gradient(90deg, rgba(235,140,52,0.95), rgba(229,106,0,0.95));
+        background: linear-gradient(90deg, rgba(235, 140, 52, 0.95), rgba(229, 106, 0, 0.95));
         border-radius: 10px;
         color: #fff;
     }
+
     .carousel-caption .product-name {
         font-weight: 700;
         font-size: 1.05rem;
     }
+
     .carousel-caption .product-price {
         font-weight: 600;
         font-size: 0.95rem;
         opacity: 0.95;
     }
 
-    .carousel-indicators { z-index: 5; }
+    .carousel-indicators {
+        z-index: 5;
+    }
+
     @media (max-width: 767px) {
-        .carousel-item img { height: 220px; }
-        .left-panel { padding: 18px; }
-        .carousel-caption { left: 8px; right: 8px; bottom: 10px; font-size: 13px; }
+        .carousel-item img {
+            height: 220px;
+        }
+
+        .left-panel {
+            padding: 18px;
+        }
+
+        .carousel-caption {
+            left: 8px;
+            right: 8px;
+            bottom: 10px;
+            font-size: 13px;
+        }
     }
 </style>
 {% endblock %}
@@ -99,21 +125,20 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Email or Mobile Number</label>
-                        <input type="text" name="identifier" class="form-control"
-                               placeholder="Enter Email or Mobile" required>
+                        <input type="text" name="identifier" class="form-control" placeholder="Enter Email or Mobile"
+                            required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control"
-                               placeholder="Enter Password" required>
+                        <input type="password" name="password" class="form-control" placeholder="Enter Password"
+                            required>
                     </div>
                     <button type="submit" class="btn btn-brand w-100">Login</button>
                 </form>
 
                 <div class="text-center mt-3">
                     <p>Don't have an account?
-                        <a href="{% url 'register' %}"
-                           style="color:var(--brand); font-weight:600;">Register here</a>
+                        <a href="{% url 'register' %}" style="color:var(--brand); font-weight:600;">Register here</a>
                     </p>
                 </div>
             </div>
@@ -121,8 +146,8 @@
 
         <!-- RIGHT: snack carousel -->
         <div class="col-lg-6 col-md-5 mt-4 mt-md-0">
-            <div id="snackCarousel" class="carousel slide"
-                 data-bs-ride="carousel" data-bs-interval="2500" data-bs-pause="hover">
+            <div id="snackCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="2500"
+                data-bs-pause="hover">
                 <div class="carousel-inner">
                     <!-- same 24 slides as Flask -->
                     <div class="carousel-item active">
@@ -295,13 +320,13 @@
                     </div>
                 </div>
 
-                <button class="carousel-control-prev" type="button"
-                        data-bs-target="#snackCarousel" data-bs-slide="prev">
+                <button class="carousel-control-prev" type="button" data-bs-target="#snackCarousel"
+                    data-bs-slide="prev">
                     <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Previous</span>
                 </button>
-                <button class="carousel-control-next" type="button"
-                        data-bs-target="#snackCarousel" data-bs-slide="next">
+                <button class="carousel-control-next" type="button" data-bs-target="#snackCarousel"
+                    data-bs-slide="next">
                     <span class="carousel-control-next-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Next</span>
                 </button>

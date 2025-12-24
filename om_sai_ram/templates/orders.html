@@ -11,25 +11,25 @@
 </div>
 
 {% if orders %}
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead class="table-light">
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead class="table-light">
             <tr>
                 <th>Order ID</th>
-                <th>Date &amp; Time</th> 
-                <th>Price (₹)</th> 
+                <th>Date &amp; Time</th>
+                <th>Price (₹)</th>
                 <th>Status</th>
                 <th class="text-end">Actions</th>
             </tr>
-            </thead>
-            <tbody>
+        </thead>
+        <tbody>
             {% for order in orders %}
-                <tr>
-                    <td>#{{ order.order_id }}</td>
-                    <td>{{ order.order_time|date:"d M Y, h:i A" }}</td>
-                    <td>₹ {{ order.price|default:"0" }}</td>
-                    <td>
-                        <span class="badge
+            <tr>
+                <td>#{{ order.order_id }}</td>
+                <td>{{ order.order_time|date:"d M Y, h:i A" }}</td>
+                <td>₹ {{ order.price|default:"0" }}</td>
+                <td>
+                    <span class="badge
                             {% if order.status == 'Pending' %}bg-warning
                             {% elif order.status == 'Paid' %}bg-info
                             {% elif order.status == 'Preparing' %}bg-primary
@@ -37,23 +37,22 @@
                             {% elif order.status == 'Completed' %}bg-success
                             {% elif order.status == 'Cancelled' %}bg-danger
                             {% else %}bg-secondary{% endif %}">
-                            {{ order.status }}
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <a href="{% url 'view_order' order.order_id %}"
-                            class="btn btn-sm btn-outline-secondary">
-                            View
-                            </a>
-                    </td>
-                </tr>
+                        {{ order.status }}
+                    </span>
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'view_order' order.order_id %}" class="btn btn-sm btn-outline-secondary">
+                        View
+                    </a>
+                </td>
+            </tr>
             {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        </tbody>
+    </table>
+</div>
 {% else %}
-    <div class="alert alert-info">
-        You have no orders yet. <a href="{% url 'home' %}">Order your first snack</a>.
-    </div>
+<div class="alert alert-info">
+    You have no orders yet. <a href="{% url 'home' %}">Order your first snack</a>.
+</div>
 {% endif %}
 {% endblock %}

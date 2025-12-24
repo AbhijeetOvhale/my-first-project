@@ -30,9 +30,8 @@
                         <td style="max-width:320px;">{{ fb.feedback_content }}</td>
                         <td>{{ fb.feedback_time }}</td>
                         <td>
-                            <form method="post"
-                                  action="{% url 'owner_delete_feedback' fb.feedback_id %}"
-                                  onsubmit="return confirm('Delete this feedback?');">
+                            <form method="post" action="{% url 'owner_delete_feedback' fb.feedback_id %}"
+                                onsubmit="return confirm('Delete this feedback?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-danger">
                                     Delete

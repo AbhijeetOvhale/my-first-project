@@ -11,9 +11,9 @@
             <h3 class="mb-1">
                 Payment -
                 {% if method == "cashless" %}
-                    Cashless
+                Cashless
                 {% else %}
-                    Cash
+                Cash
                 {% endif %}
             </h3>
             <p class="text-muted small mb-0">
@@ -61,22 +61,22 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body d-flex flex-column justify-content-between">
                     {% if method == "cashless" %}
-                        <div>
-                            <h5 class="mb-2">Cashless Payment</h5>
-                            <p class="text-muted small">
-                                1. Scan the QR code using any UPI app (PhonePe, GPay, Paytm, etc.).<br>
-                                2. Complete the payment of <strong>₹{{ total }}</strong>.<br>
-                                3. After successful payment, tap <strong>“Payment Done”</strong> below.
-                            </p>
-                        </div>
+                    <div>
+                        <h5 class="mb-2">Cashless Payment</h5>
+                        <p class="text-muted small">
+                            1. Scan the QR code using any UPI app (PhonePe, GPay, Paytm, etc.).<br>
+                            2. Complete the payment of <strong>₹{{ total }}</strong>.<br>
+                            3. After successful payment, tap <strong>“Payment Done”</strong> below.
+                        </p>
+                    </div>
                     {% else %}
-                        <div>
-                            <h5 class="mb-2">Cash Payment</h5>
-                            <p class="text-muted small">
-                                Please pay <strong>₹{{ total }}</strong> in cash at the counter.
-                                After handing over the cash, tap <strong>“Payment Done”</strong> below.
-                            </p>
-                        </div>
+                    <div>
+                        <h5 class="mb-2">Cash Payment</h5>
+                        <p class="text-muted small">
+                            Please pay <strong>₹{{ total }}</strong> in cash at the counter.
+                            After handing over the cash, tap <strong>“Payment Done”</strong> below.
+                        </p>
+                    </div>
                     {% endif %}
 
                     <form method="post" class="mt-3">
@@ -87,7 +87,7 @@
                                 Payment Done
                             </button>
                             <button type="submit" name="action" value="cancel" class="btn btn-outline-secondary">
-                                Cancel &amp; Go Back
+                                Cancel &amp; Change Method
                             </button>
                         </div>
                     </form>
@@ -100,11 +100,10 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body d-flex flex-column align-items-center justify-content-center">
                     <h6 class="mb-3">Scan to Pay (Cashless)</h6>
-                    <div style="max-width: 260px; width: 100%; border: 1px solid #eee; padding: 8px; border-radius: 12px;">
-                        <img src="{% static 'images/payment-qr-code.jpg' %}"
-                             alt="Payment QR Code"
-                             class="img-fluid d-block mx-auto"
-                             style="border-radius: 8px;">
+                    <div
+                        style="max-width: 260px; width: 100%; border: 1px solid #eee; padding: 8px; border-radius: 12px;">
+                        <img src="{% static 'images/payment-qr-code.jpg' %}" alt="Payment QR Code"
+                            class="img-fluid d-block mx-auto" style="border-radius: 8px;">
                     </div>
                     <p class="text-muted small mt-2 mb-0 text-center">
                         Use any UPI app to scan this QR code and complete the payment.
