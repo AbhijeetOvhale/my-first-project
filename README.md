@@ -60,6 +60,8 @@ Follow these steps to run the project locally:
 7.  Open the app:
     Visit http://127.0.0.1:8000/ in your browser.
 
+(You can also find all the important ready to paste codes, in the 'osc project all codes' file!)
+
 ## 🔑 Login Credentials
 
 To test the Owner Dashboard, use the following credentials:
